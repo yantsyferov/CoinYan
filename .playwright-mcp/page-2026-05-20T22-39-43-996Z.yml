@@ -1,0 +1,17 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: 💜 CoinYan
+  - paragraph [ref=e6]: Welcome back
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Email
+      - textbox "Email" [ref=e10]
+    - generic [ref=e11]:
+      - generic [ref=e12]: Password
+      - textbox "Password" [ref=e13]
+    - link "Forgot password?" [ref=e15] [cursor=pointer]:
+      - /url: /forgot-password
+    - button "Sign in" [disabled] [ref=e16]
+  - paragraph [ref=e17]:
+    - text: Don't have an account?
+    - link "Sign up" [ref=e18] [cursor=pointer]:
+      - /url: /sign-up

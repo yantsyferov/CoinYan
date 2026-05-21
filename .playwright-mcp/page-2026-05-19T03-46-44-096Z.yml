@@ -1,0 +1,32 @@
+- main [ref=e5]:
+  - button "← Back" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e8]: 💵
+    - generic [ref=e9]:
+      - heading "Test Account" [level=1] [ref=e10]
+      - paragraph [ref=e11]: $0.00
+    - button "Edit" [active] [ref=e12] [cursor=pointer]
+  - generic [ref=e16]:
+    - heading "Edit account" [level=2] [ref=e17]
+    - generic [ref=e18]:
+      - text: Name
+      - textbox [ref=e19]: Test Account
+    - generic [ref=e20]:
+      - text: Icon
+      - generic [ref=e21]:
+        - generic [ref=e22] [cursor=pointer]: 💵
+        - generic [ref=e23] [cursor=pointer]: 💳
+        - generic [ref=e24] [cursor=pointer]: 🏦
+        - generic [ref=e25] [cursor=pointer]: 👛
+        - generic [ref=e26] [cursor=pointer]: 🏛️
+        - generic [ref=e27] [cursor=pointer]: 🐷
+    - generic [ref=e28]:
+      - text: Currency
+      - generic [ref=e29]: USD
+      - paragraph [ref=e30]: Currency cannot be changed after creation
+    - generic [ref=e31]:
+      - button "Cancel" [ref=e32] [cursor=pointer]
+      - button "Save" [ref=e33] [cursor=pointer]
+    - button "Delete account" [ref=e35] [cursor=pointer]
+  - heading "Transactions" [level=2] [ref=e13]
+  - paragraph [ref=e14]: No transactions yet.

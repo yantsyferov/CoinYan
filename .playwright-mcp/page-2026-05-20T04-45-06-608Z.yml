@@ -1,0 +1,20 @@
+- main [ref=e3]:
+  - button "← Back" [ref=e4] [cursor=pointer]
+  - generic [ref=e5]:
+    - generic [ref=e6]: 💵
+    - generic [ref=e7]:
+      - heading "Test Card" [level=1] [ref=e8]
+      - paragraph [ref=e9]: $850.00
+    - button "Edit" [ref=e10] [cursor=pointer]
+  - heading "Transactions" [level=2] [ref=e11]
+  - generic [ref=e12]:
+    - button "20 мая 2026 г. ⇄Test UI transfer · Spending Wallet $50.00" [ref=e13] [cursor=pointer]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: 20 мая 2026 г.
+        - generic [ref=e16]: ⇄Test UI transfer · Spending Wallet
+      - generic [ref=e17]: $50.00
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: 20 мая 2026 г.
+        - generic [ref=e21]: expense
+      - generic [ref=e22]: −$100.00

@@ -1,0 +1,5 @@
+- generic [ref=e4]:
+  - heading "Email Confirmation" [level=1] [ref=e5]
+  - alert [ref=e6]: This confirmation link has expired or already been used.
+  - link "Back to profile" [ref=e7] [cursor=pointer]:
+    - /url: /profile

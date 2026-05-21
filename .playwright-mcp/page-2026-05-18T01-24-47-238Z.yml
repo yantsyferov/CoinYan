@@ -1,0 +1,14 @@
+- main [ref=e5]:
+  - heading "My Accounts" [level=1] [ref=e6]
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]: 👛
+      - generic [ref=e10]: Spending Wallet
+      - generic [ref=e11]: 0.00 USD
+    - generic [ref=e12]:
+      - generic [ref=e13] [cursor=pointer]: 💳
+      - generic [ref=e14]: Main Card
+      - generic [ref=e15]: 1500.00 EUR
+    - generic [ref=e16]:
+      - generic [ref=e17] [cursor=pointer]: +
+      - generic [ref=e18]: Add

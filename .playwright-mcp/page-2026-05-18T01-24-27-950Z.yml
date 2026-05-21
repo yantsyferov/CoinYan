@@ -1,0 +1,35 @@
+- main [ref=e5]:
+  - heading "My Accounts" [level=1] [ref=e6]
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]: 💵
+      - generic [ref=e10]: Cash
+      - generic [ref=e11]: 0.00 USD
+    - generic [ref=e12]:
+      - generic [ref=e13] [cursor=pointer]: 💳
+      - generic [ref=e14]: Main Card
+      - generic [ref=e15]: 1500.00 EUR
+    - generic [ref=e16]:
+      - generic [ref=e17] [cursor=pointer]: +
+      - generic [ref=e18]: Add
+  - generic [ref=e20]:
+    - heading "Edit account" [level=2] [ref=e21]
+    - generic [ref=e22]:
+      - text: Name
+      - textbox [ref=e23]: Cash
+    - generic [ref=e24]:
+      - text: Icon
+      - generic [ref=e25]:
+        - generic [ref=e26] [cursor=pointer]: 💵
+        - generic [ref=e27] [cursor=pointer]: 💳
+        - generic [ref=e28] [cursor=pointer]: 🏦
+        - generic [ref=e29] [cursor=pointer]: 👛
+        - generic [ref=e30] [cursor=pointer]: 🏛️
+        - generic [ref=e31] [cursor=pointer]: 🐷
+    - generic [ref=e32]:
+      - text: Currency
+      - generic [ref=e33]: USD
+      - paragraph [ref=e34]: Currency cannot be changed after creation
+    - generic [ref=e35]:
+      - button "Cancel" [ref=e36] [cursor=pointer]
+      - button "Save" [ref=e37] [cursor=pointer]

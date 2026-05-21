@@ -1,0 +1,6 @@
+- generic [ref=e4]:
+  - heading "Reset password" [level=1] [ref=e5]
+  - alert [ref=e18]: This reset link has expired or already been used. Please request a new one.
+  - paragraph [ref=e19]:
+    - link "Request a new reset link" [ref=e20] [cursor=pointer]:
+      - /url: /forgot-password

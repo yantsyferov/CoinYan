@@ -1,0 +1,30 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: U
+  - generic [ref=e6]:
+    - heading "Updated User" [level=1] [ref=e7]
+    - button "Edit display name" [ref=e8] [cursor=pointer]: Edit
+  - separator [ref=e9]
+  - heading "Change Password" [level=2] [ref=e10]
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - text: Current password
+      - textbox "Current password" [ref=e13]
+    - generic [ref=e14]:
+      - text: New password
+      - textbox "New password" [ref=e15]
+    - generic [ref=e16]:
+      - text: Confirm new password
+      - textbox "Confirm new password" [ref=e17]
+    - button "Update password" [disabled] [ref=e18]
+  - separator [ref=e19]
+  - heading "Email Address" [level=2] [ref=e20]
+  - paragraph [ref=e21]: testuser@example.com
+  - status [ref=e28]: A confirmation link has been sent to testuser-new@example.com. Click it to complete the change.
+  - generic [ref=e22]:
+    - generic [ref=e23]:
+      - text: New email address
+      - textbox "New email address" [ref=e24]
+    - button "Change email" [disabled] [ref=e25]
+    - status [ref=e29]: Confirmation link sent. Check your inbox.
+  - separator [ref=e26]
+  - button "Sign out" [ref=e27] [cursor=pointer]

@@ -1,0 +1,5 @@
+- main [ref=e62]:
+  - link "← Back to Accounts" [ref=e64] [cursor=pointer]:
+    - /url: /accounts
+  - heading "Archived Accounts" [level=1] [ref=e65]
+  - paragraph [ref=e75]: No archived accounts

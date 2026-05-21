@@ -1,0 +1,9 @@
+- main [ref=e121]:
+  - button "← Back" [ref=e122] [cursor=pointer]
+  - generic [ref=e123]:
+    - generic [ref=e124]: 💵
+    - generic [ref=e125]:
+      - heading "Test Account" [level=1] [ref=e126]
+      - paragraph [ref=e127]: $0.00
+  - heading "Transactions" [level=2] [ref=e128]
+  - paragraph [ref=e129]: No transactions yet.

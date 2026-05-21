@@ -1,0 +1,27 @@
+- main [ref=e59]:
+  - generic [ref=e60]:
+    - heading "My Accounts" [level=1] [ref=e61]
+    - link "Archived →" [ref=e62] [cursor=pointer]:
+      - /url: /accounts/archived
+  - generic [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66] [cursor=pointer]: 👛
+        - button "⋯" [ref=e67] [cursor=pointer]
+      - generic [ref=e68]: Spending Wallet
+      - generic [ref=e69]: 0.00 USD
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e72] [cursor=pointer]: 💳
+        - button "⋯" [ref=e73] [cursor=pointer]
+      - generic [ref=e74]: Main Card
+      - generic [ref=e75]: 1500.00 EUR
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e78] [cursor=pointer]: 💵
+        - button "⋯" [ref=e79] [cursor=pointer]
+      - generic [ref=e80]: Test Card
+      - generic [ref=e81]: 0.00 USD
+    - generic [ref=e82]:
+      - generic [ref=e83] [cursor=pointer]: +
+      - generic [ref=e84]: Add

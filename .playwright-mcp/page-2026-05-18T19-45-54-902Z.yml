@@ -1,0 +1,13 @@
+- main [ref=e99]:
+  - button "← Back" [ref=e100] [cursor=pointer]
+  - generic [ref=e101]:
+    - generic [ref=e102]: 💵
+    - generic [ref=e103]:
+      - heading "Salary" [level=1] [ref=e104]
+      - paragraph [ref=e105]: "Total received: 2 000"
+  - heading "Transactions" [level=2] [ref=e106]
+  - generic [ref=e108]:
+    - generic [ref=e109]:
+      - generic [ref=e110]: 18 мая 2026 г.
+      - generic [ref=e111]: Income
+    - generic [ref=e112]: +2 000

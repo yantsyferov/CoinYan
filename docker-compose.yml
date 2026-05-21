@@ -1,0 +1,180 @@
+services:
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coinyan
+      POSTGRES_PASSWORD: coinyan
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinyan -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  accounts-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coinyan
+      POSTGRES_PASSWORD: coinyan
+      POSTGRES_DB: accounts_db
+    volumes:
+      - accounts-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinyan -d accounts_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@auth-db:5432/auth_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-change-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 30
+      RESEND_API_KEY: re_placeholder
+      EMAIL_FROM: no-reply@coinyan.dev
+      FRONTEND_BASE_URL: http://localhost:5173
+      SENTRY_DSN: ""
+
+  accounts-service:
+    build:
+      context: ./services/accounts-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    depends_on:
+      accounts-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@accounts-db:5432/accounts_db
+      DEFAULT_ACCOUNT_CURRENCY: USD
+      SENTRY_DSN: ""
+
+  categories-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coinyan
+      POSTGRES_PASSWORD: coinyan
+      POSTGRES_DB: categories_db
+    volumes:
+      - categories-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinyan -d categories_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  categories-service:
+    build:
+      context: ./services/categories-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    depends_on:
+      categories-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@categories-db:5432/categories_db
+      SENTRY_DSN: ""
+
+  transactions-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coinyan
+      POSTGRES_PASSWORD: coinyan
+      POSTGRES_DB: transactions_db
+    volumes:
+      - transactions-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinyan -d transactions_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  transactions-service:
+    build:
+      context: ./services/transactions-service
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    depends_on:
+      transactions-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@transactions-db:5432/transactions_db
+      SENTRY_DSN: ""
+
+  web-bff:
+    build:
+      context: ./services/web-bff
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    depends_on:
+      auth-service:
+        condition: service_started
+      accounts-service:
+        condition: service_started
+      categories-service:
+        condition: service_started
+      transactions-service:
+        condition: service_started
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8000
+      ACCOUNTS_SERVICE_URL: http://accounts-service:8002
+      CATEGORIES_SERVICE_URL: http://categories-service:8003
+      TRANSACTIONS_SERVICE_URL: http://transactions-service:8004
+      SENTRY_DSN: ""
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - web-bff
+
+volumes:
+  auth-db-data:
+  accounts-db-data:
+  categories-db-data:
+  transactions-db-data:
+  redis-data:

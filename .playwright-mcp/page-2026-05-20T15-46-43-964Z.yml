@@ -1,0 +1,45 @@
+- main [ref=e218]:
+  - button "← Back" [ref=e219] [cursor=pointer]
+  - generic [ref=e220]:
+    - generic [ref=e221]: 🐷
+    - generic [ref=e222]:
+      - heading "Сейф" [level=1] [ref=e223]
+      - paragraph [ref=e224]: $6,400.00
+    - button "Edit" [ref=e225] [cursor=pointer]
+  - heading "Transactions" [level=2] [ref=e226]
+  - generic [ref=e227]:
+    - button "20 мая 2026 г. ⇄Spending Wallet −$100.00" [ref=e228] [cursor=pointer]:
+      - generic [ref=e229]:
+        - generic [ref=e230]: 20 мая 2026 г.
+        - generic [ref=e231]: ⇄Spending Wallet
+      - generic [ref=e232]: −$100.00
+    - button "20 мая 2026 г. ⇄Spending Wallet −$100.00" [ref=e233] [cursor=pointer]:
+      - generic [ref=e234]:
+        - generic [ref=e235]: 20 мая 2026 г.
+        - generic [ref=e236]: ⇄Spending Wallet
+      - generic [ref=e237]: −$100.00
+    - button "20 мая 2026 г. ⇄Spending Wallet −$100.00" [ref=e238] [cursor=pointer]:
+      - generic [ref=e239]:
+        - generic [ref=e240]: 20 мая 2026 г.
+        - generic [ref=e241]: ⇄Spending Wallet
+      - generic [ref=e242]: −$100.00
+    - generic [ref=e243]:
+      - generic [ref=e244]:
+        - generic [ref=e245]: 20 мая 2026 г.
+        - generic [ref=e246]: expense
+      - generic [ref=e247]: −$60.00
+    - button "20 мая 2026 г. ⇄Spending Wallet −$60.00" [ref=e248] [cursor=pointer]:
+      - generic [ref=e249]:
+        - generic [ref=e250]: 20 мая 2026 г.
+        - generic [ref=e251]: ⇄Spending Wallet
+      - generic [ref=e252]: −$60.00
+    - button "20 мая 2026 г. ⇄Spending Wallet −$60.00" [ref=e253] [cursor=pointer]:
+      - generic [ref=e254]:
+        - generic [ref=e255]: 20 мая 2026 г.
+        - generic [ref=e256]: ⇄Spending Wallet
+      - generic [ref=e257]: −$60.00
+    - button "20 мая 2026 г. ⇄Spending Wallet −$100.00" [ref=e258] [cursor=pointer]:
+      - generic [ref=e259]:
+        - generic [ref=e260]: 20 мая 2026 г.
+        - generic [ref=e261]: ⇄Spending Wallet
+      - generic [ref=e262]: −$100.00

@@ -1,0 +1,5 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: T
+  - heading "Test User" [level=1] [ref=e6]
+  - paragraph [ref=e7]: testuser@example.com
+  - button "Sign out" [ref=e8] [cursor=pointer]

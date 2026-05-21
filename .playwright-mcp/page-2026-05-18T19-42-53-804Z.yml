@@ -1,0 +1,63 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - heading "CoinYan" [level=1] [ref=e7]
+    - button "👤" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - heading "💰 Accounts" [level=2] [ref=e10]
+    - generic [ref=e11]:
+      - generic [ref=e13]:
+        - button "👛" [ref=e14]
+        - generic [ref=e15]: Spending Wallet
+        - generic [ref=e16]: USD 0
+      - generic [ref=e18]:
+        - button "💳" [ref=e19]
+        - generic [ref=e20]: Main Card
+        - generic [ref=e21]: EUR 1 500
+      - generic [ref=e23]:
+        - button "💵" [ref=e24]
+        - generic [ref=e25]: Test Card
+        - generic [ref=e26]: USD 0
+      - generic [ref=e28]:
+        - button "🐷" [ref=e29]
+        - generic [ref=e30]: Сейф
+        - generic [ref=e31]: USD 4 950
+      - generic [ref=e32] [cursor=pointer]: +
+  - generic [ref=e33]:
+    - heading "💹 Income Sources" [level=2] [ref=e34]
+    - generic [ref=e35]:
+      - generic [ref=e37]:
+        - button "💵" [ref=e38]
+        - generic [ref=e39]: Salary
+      - generic [ref=e40] [cursor=pointer]: +
+  - generic [ref=e41]:
+    - heading "🧾 Expense Categories" [level=2] [ref=e42]
+    - generic [ref=e43]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: 👛
+        - generic [ref=e47]: Supermarket
+      - generic [ref=e49]:
+        - generic [ref=e50]: 💵
+        - generic [ref=e51]: Dining Out
+      - generic [ref=e53]:
+        - generic [ref=e54]: 💵
+        - generic [ref=e55]: Entertainment
+      - generic [ref=e57]:
+        - generic [ref=e58]: 💵
+        - generic [ref=e59]: Healthcare
+      - generic [ref=e61]:
+        - generic [ref=e62]: 💵
+        - generic [ref=e63]: Utilities
+      - generic [ref=e65]:
+        - generic [ref=e66]: 💵
+        - generic [ref=e67]: Shopping
+      - generic [ref=e69]:
+        - generic [ref=e70]: 💵
+        - generic [ref=e71]: Education
+      - generic [ref=e73]:
+        - generic [ref=e74]: 💵
+        - generic [ref=e75]: Rent
+      - generic [ref=e77]:
+        - generic [ref=e78]: 💵
+        - generic [ref=e79]: Coffee
+      - generic [ref=e80] [cursor=pointer]: +
+  - status [ref=e81]: Draggable item account:be1207a9-7f36-40a5-81cd-2db1037363bc was dropped over droppable area category:391c1910-1f41-4d51-81a1-11c48fe003c2

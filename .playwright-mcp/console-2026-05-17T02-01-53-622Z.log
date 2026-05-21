@@ -1,0 +1,29 @@
+[     133ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-TYILIMWK.js?v=2bdb5cd2:21550
+[     138ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4435
+[     138ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4435
+[     285ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/profile:0
+[   10135ms] [LOG] Download the Apollo DevTools for a better development experience: %s https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm @ http://localhost:5173/node_modules/.vite/deps/chunk-BWUDQKKD.js?v=2bdb5cd2:180
+[   41199ms] [ERROR] Warning: %s a style property during rerender (%s) when a conflicting property is set (%s) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.%s Removing borderColor border 
+    at input
+    at label
+    at form
+    at div
+    at div
+    at ProfilePage (http://localhost:5173/src/pages/profile/ProfilePage.tsx:285:29)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4131:5)
+    at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4537:26)
+    at ProtectedRoute (http://localhost:5173/src/shared/lib/router/ProtectedRoute.tsx:23:31)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4131:5)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4601:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4544:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:5290:5)
+    at ApolloProvider (http://localhost:5173/node_modules/.vite/deps/@apollo_client.js?v=2bdb5cd2:6681:19) @ http://localhost:5173/node_modules/.vite/deps/chunk-TYILIMWK.js?v=2bdb5cd2:520
+[  339021ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:559
+[  339026ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:5173/:0
+[  340031ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/:0
+[  341034ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:5173/:0
+[  342594ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-TYILIMWK.js?v=2bdb5cd2:21550
+[  342599ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4435
+[  342599ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2bdb5cd2:4435
+[  352598ms] [LOG] Download the Apollo DevTools for a better development experience: %s https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm @ http://localhost:5173/node_modules/.vite/deps/chunk-BWUDQKKD.js?v=2bdb5cd2:180

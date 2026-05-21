@@ -1,0 +1,6 @@
+- main [ref=e22]:
+  - heading "CoinYan" [level=1] [ref=e23]
+  - paragraph [ref=e24]: Welcome!
+  - navigation [ref=e25]:
+    - link "My Accounts" [ref=e26] [cursor=pointer]:
+      - /url: /accounts

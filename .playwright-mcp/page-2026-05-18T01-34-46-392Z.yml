@@ -1,0 +1,12 @@
+- main [ref=e45]:
+  - link "← Back to Accounts" [ref=e47] [cursor=pointer]:
+    - /url: /accounts
+  - heading "Archived Accounts" [level=1] [ref=e48]
+  - generic [ref=e50]:
+    - generic [ref=e51]: 💵
+    - generic [ref=e52]:
+      - paragraph [ref=e53]: Test Card
+      - paragraph [ref=e54]: deleted_all
+      - paragraph [ref=e55]: 30 days left to recover
+    - generic [ref=e56]: 0.00 USD
+    - button "Restore" [ref=e57] [cursor=pointer]

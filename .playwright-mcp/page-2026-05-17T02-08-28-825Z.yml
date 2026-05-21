@@ -1,0 +1,5 @@
+- generic [ref=e4]:
+  - heading "Email Confirmation" [level=1] [ref=e5]
+  - status [ref=e7]: Your email address has been updated.
+  - link "Back to profile" [ref=e8] [cursor=pointer]:
+    - /url: /profile

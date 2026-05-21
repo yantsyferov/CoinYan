@@ -1,0 +1,6 @@
+- generic [ref=e4]:
+  - heading "Forgot password" [level=1] [ref=e5]
+  - status [ref=e14]: If an account exists for this email, a reset link has been sent.
+  - paragraph [ref=e15]:
+    - link "Back to sign in" [ref=e16] [cursor=pointer]:
+      - /url: /sign-in

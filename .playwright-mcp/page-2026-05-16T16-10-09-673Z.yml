@@ -1,0 +1,17 @@
+- generic [ref=e4]:
+  - heading "Create an account" [level=1] [ref=e5]
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - text: Display name
+        - textbox "Display name" [ref=e9]
+      - generic [ref=e10]:
+        - text: Email
+        - textbox "Email" [ref=e11]
+      - generic [ref=e12]:
+        - text: Password
+        - textbox "Password" [ref=e13]
+      - generic [ref=e14]:
+        - text: Confirm password
+        - textbox "Confirm password" [ref=e15]
+    - button "Sign up" [disabled] [ref=e16]

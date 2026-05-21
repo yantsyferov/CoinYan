@@ -1,0 +1,73 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - heading "CoinYan" [level=1] [ref=e5]
+    - button "👤" [ref=e6] [cursor=pointer]
+  - generic [ref=e8]:
+    - heading "💹 Income Sources" [level=2] [ref=e9]
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - button "💵" [ref=e13]
+        - generic [ref=e14]: Salary
+        - generic [ref=e15]: $0.00
+      - generic [ref=e16] [cursor=pointer]: +
+  - generic [ref=e17]:
+    - heading "💰 Accounts" [level=2] [ref=e18]
+    - generic [ref=e19]:
+      - generic [ref=e21]:
+        - button "👛" [active] [ref=e22]
+        - generic [ref=e23]: Spending Wallet
+        - generic [ref=e24]: $200.00
+      - generic [ref=e26]:
+        - button "💳" [ref=e27]
+        - generic [ref=e28]: Main Card
+        - generic [ref=e29]: €1,199.00
+      - generic [ref=e31]:
+        - button "💵" [ref=e32]
+        - generic [ref=e33]: Test Card
+        - generic [ref=e34]: $900.00
+      - generic [ref=e36]:
+        - button "🐷" [ref=e37]
+        - generic [ref=e38]: Сейф
+        - generic [ref=e39]: $6,500.00
+      - generic [ref=e40] [cursor=pointer]: +
+  - generic [ref=e41]:
+    - heading "🧾 Expense Categories" [level=2] [ref=e42]
+    - generic [ref=e43]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: 👛
+        - generic [ref=e47]: Supermarket
+        - generic [ref=e48]: $1.16
+      - generic [ref=e50]:
+        - generic [ref=e51]: 💵
+        - generic [ref=e52]: Dining Out
+        - generic [ref=e53]: $0.00
+      - generic [ref=e55]:
+        - generic [ref=e56]: 💵
+        - generic [ref=e57]: Entertainment
+        - generic [ref=e58]: $0.00
+      - generic [ref=e60]:
+        - generic [ref=e61]: 💵
+        - generic [ref=e62]: Healthcare
+        - generic [ref=e63]: $0.00
+      - generic [ref=e65]:
+        - generic [ref=e66]: 💵
+        - generic [ref=e67]: Utilities
+        - generic [ref=e68]: $160.00
+      - generic [ref=e70]:
+        - generic [ref=e71]: 💵
+        - generic [ref=e72]: Shopping
+        - generic [ref=e73]: $0.00
+      - generic [ref=e75]:
+        - generic [ref=e76]: 💵
+        - generic [ref=e77]: Education
+        - generic [ref=e78]: $0.00
+      - generic [ref=e80]:
+        - generic [ref=e81]: 💵
+        - generic [ref=e82]: Rent
+        - generic [ref=e83]: $0.00
+      - generic [ref=e85]:
+        - generic [ref=e86]: 💵
+        - generic [ref=e87]: Coffee
+        - generic [ref=e88]: $0.00
+      - generic [ref=e89] [cursor=pointer]: +
+  - status [ref=e90]: Draggable item account:2fafd0a5-ae56-4931-946c-51304258d65a was dropped over droppable area account-drop:2fafd0a5-ae56-4931-946c-51304258d65a

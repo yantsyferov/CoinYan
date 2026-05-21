@@ -1,0 +1,22 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: U
+  - generic [ref=e6]:
+    - heading "Updated User" [level=1] [ref=e26]
+    - button "Edit display name" [ref=e27] [cursor=pointer]: Edit
+  - paragraph [ref=e9]: testuser@example.com
+  - separator [ref=e10]
+  - heading "Change Password" [level=2] [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - text: Current password
+      - textbox "Current password" [ref=e14]
+    - generic [ref=e15]:
+      - text: New password
+      - textbox "New password" [ref=e34]
+    - generic [ref=e17]:
+      - text: Confirm new password
+      - textbox "Confirm new password" [ref=e18]
+    - button "Update password" [disabled] [ref=e19]
+    - status [ref=e35]: Password updated successfully
+  - separator [ref=e20]
+  - button "Sign out" [ref=e21] [cursor=pointer]

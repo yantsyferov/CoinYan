@@ -1,0 +1,73 @@
+- main [ref=e131]:
+  - generic [ref=e132]:
+    - heading "CoinYan" [level=1] [ref=e133]
+    - button "👤" [ref=e134] [cursor=pointer]
+  - generic [ref=e135]:
+    - heading "💹 Income Sources" [level=2] [ref=e136]
+    - generic [ref=e137]:
+      - generic [ref=e139]:
+        - button "💵" [ref=e140]
+        - generic [ref=e141]: Salary
+        - generic [ref=e142]: $0.00
+      - generic [ref=e143] [cursor=pointer]: +
+  - generic [ref=e144]:
+    - heading "💰 Accounts" [level=2] [ref=e145]
+    - generic [ref=e146]:
+      - generic [ref=e148]:
+        - button "👛" [ref=e149]
+        - generic [ref=e150]: Spending Wallet
+        - generic [ref=e151]: $300.00
+      - generic [ref=e153]:
+        - button "💳" [ref=e154]
+        - generic [ref=e155]: Main Card
+        - generic [ref=e156]: €1,199.00
+      - generic [ref=e158]:
+        - button "💵" [ref=e159]
+        - generic [ref=e160]: Test Card
+        - generic [ref=e161]: $900.00
+      - generic [ref=e163]:
+        - button "🐷" [ref=e164]
+        - generic [ref=e165]: Сейф
+        - generic [ref=e166]: $6,400.00
+      - generic [ref=e167] [cursor=pointer]: +
+  - generic [ref=e168]:
+    - heading "🧾 Expense Categories" [level=2] [ref=e169]
+    - generic [ref=e170]:
+      - generic [ref=e172]:
+        - generic [ref=e173]: 👛
+        - generic [ref=e174]: Supermarket
+        - generic [ref=e175]: $1.16
+      - generic [ref=e177]:
+        - generic [ref=e178]: 💵
+        - generic [ref=e179]: Dining Out
+        - generic [ref=e180]: $0.00
+      - generic [ref=e182]:
+        - generic [ref=e183]: 💵
+        - generic [ref=e184]: Entertainment
+        - generic [ref=e185]: $0.00
+      - generic [ref=e187]:
+        - generic [ref=e188]: 💵
+        - generic [ref=e189]: Healthcare
+        - generic [ref=e190]: $0.00
+      - generic [ref=e192]:
+        - generic [ref=e193]: 💵
+        - generic [ref=e194]: Utilities
+        - generic [ref=e195]: $160.00
+      - generic [ref=e197]:
+        - generic [ref=e198]: 💵
+        - generic [ref=e199]: Shopping
+        - generic [ref=e200]: $0.00
+      - generic [ref=e202]:
+        - generic [ref=e203]: 💵
+        - generic [ref=e204]: Education
+        - generic [ref=e205]: $0.00
+      - generic [ref=e207]:
+        - generic [ref=e208]: 💵
+        - generic [ref=e209]: Rent
+        - generic [ref=e210]: $0.00
+      - generic [ref=e212]:
+        - generic [ref=e213]: 💵
+        - generic [ref=e214]: Coffee
+        - generic [ref=e215]: $0.00
+      - generic [ref=e216] [cursor=pointer]: +
+  - status [ref=e217]

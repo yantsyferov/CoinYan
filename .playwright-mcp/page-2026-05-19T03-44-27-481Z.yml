@@ -1,0 +1,77 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - heading "CoinYan" [level=1] [ref=e7]
+    - button "👤" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - heading "💹 Income Sources" [level=2] [ref=e10]
+    - generic [ref=e11]:
+      - generic [ref=e13]:
+        - button "💵" [ref=e14]
+        - generic [ref=e15]: Salary
+        - generic [ref=e16]: $0.00
+      - generic [ref=e17] [cursor=pointer]: +
+  - generic [ref=e18]:
+    - heading "💰 Accounts" [level=2] [ref=e19]
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - button "👛" [ref=e23]
+        - generic [ref=e24]: Spending Wallet
+        - generic [ref=e25]: $0.00
+      - generic [ref=e27]:
+        - button "💳" [ref=e28]
+        - generic [ref=e29]: Main Card
+        - generic [ref=e30]: €1,200.00
+      - generic [ref=e32]:
+        - button "💵" [ref=e33]
+        - generic [ref=e34]: Test Card
+        - generic [ref=e35]: $900.00
+      - generic [ref=e37]:
+        - button "🐷" [ref=e38]
+        - generic [ref=e39]: Сейф
+        - generic [ref=e40]: $6,860.00
+      - generic [ref=e117]:
+        - button "💵" [ref=e118]
+        - generic [ref=e119]: Test Account
+        - generic [ref=e120]: $0.00
+      - generic [ref=e41] [cursor=pointer]: +
+  - generic [ref=e42]:
+    - heading "🧾 Expense Categories" [level=2] [ref=e43]
+    - generic [ref=e44]:
+      - generic [ref=e46]:
+        - generic [ref=e47]: 👛
+        - generic [ref=e48]: Supermarket
+        - generic [ref=e49]: $0.00
+      - generic [ref=e51]:
+        - generic [ref=e52]: 💵
+        - generic [ref=e53]: Dining Out
+        - generic [ref=e54]: $0.00
+      - generic [ref=e56]:
+        - generic [ref=e57]: 💵
+        - generic [ref=e58]: Entertainment
+        - generic [ref=e59]: $0.00
+      - generic [ref=e61]:
+        - generic [ref=e62]: 💵
+        - generic [ref=e63]: Healthcare
+        - generic [ref=e64]: $0.00
+      - generic [ref=e66]:
+        - generic [ref=e67]: 💵
+        - generic [ref=e68]: Utilities
+        - generic [ref=e69]: $0.00
+      - generic [ref=e71]:
+        - generic [ref=e72]: 💵
+        - generic [ref=e73]: Shopping
+        - generic [ref=e74]: $0.00
+      - generic [ref=e76]:
+        - generic [ref=e77]: 💵
+        - generic [ref=e78]: Education
+        - generic [ref=e79]: $0.00
+      - generic [ref=e81]:
+        - generic [ref=e82]: 💵
+        - generic [ref=e83]: Rent
+        - generic [ref=e84]: $0.00
+      - generic [ref=e86]:
+        - generic [ref=e87]: 💵
+        - generic [ref=e88]: Coffee
+        - generic [ref=e89]: $0.00
+      - generic [ref=e90] [cursor=pointer]: +
+  - status [ref=e91]

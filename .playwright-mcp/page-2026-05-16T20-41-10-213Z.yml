@@ -1,0 +1,11 @@
+- generic [ref=e4]:
+  - heading "Reset password" [level=1] [ref=e5]
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - text: New password
+        - textbox "New password" [ref=e9]
+      - generic [ref=e10]:
+        - text: Confirm new password
+        - textbox "Confirm new password" [ref=e11]
+    - button "Reset password" [disabled] [ref=e12]

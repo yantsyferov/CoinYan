@@ -1,0 +1,36 @@
+- main [ref=e5]:
+  - heading "My Accounts" [level=1] [ref=e6]
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]: 💵
+      - generic [ref=e10]: Cash
+      - generic [ref=e11]: 0.00 USD
+    - generic [ref=e12]:
+      - generic [ref=e13] [cursor=pointer]: +
+      - generic [ref=e14]: Add
+  - generic [ref=e16]:
+    - heading "Add account" [level=2] [ref=e17]
+    - generic [ref=e18]:
+      - text: Name
+      - textbox "e.g. Main Card" [ref=e19]: Main Card
+    - generic [ref=e20]:
+      - text: Icon
+      - generic [ref=e21]:
+        - generic [ref=e22] [cursor=pointer]: 💵
+        - generic [ref=e23] [cursor=pointer]: 💳
+        - generic [ref=e24] [cursor=pointer]: 🏦
+        - generic [ref=e25] [cursor=pointer]: 👛
+        - generic [ref=e26] [cursor=pointer]: 🏛️
+        - generic [ref=e27] [cursor=pointer]: 🐷
+    - generic [ref=e28]:
+      - text: Currency
+      - textbox "Search currency..." [ref=e29]: EUR
+      - generic [ref=e37] [cursor=pointer]:
+        - strong [ref=e38]: EUR
+        - text: — Euro
+    - generic [ref=e30]:
+      - generic [ref=e31]: Starting balance (optional)
+      - spinbutton [ref=e32]
+    - generic [ref=e33]:
+      - button "Cancel" [ref=e34] [cursor=pointer]
+      - button "Save" [ref=e35] [cursor=pointer]

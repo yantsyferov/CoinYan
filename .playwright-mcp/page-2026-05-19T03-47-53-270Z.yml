@@ -1,0 +1,44 @@
+- main [ref=e5]:
+  - button "← Back" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e8]: 💵
+    - generic [ref=e9]:
+      - heading "Test Account" [level=1] [ref=e10]
+      - paragraph [ref=e11]: $0.00
+    - button "Edit" [ref=e12] [cursor=pointer]
+  - generic [ref=e14]:
+    - heading "Edit account" [level=2] [ref=e15]
+    - generic [ref=e16]:
+      - text: Name
+      - textbox [ref=e17]: Test Account
+    - generic [ref=e18]:
+      - text: Icon
+      - generic [ref=e19]:
+        - generic [ref=e20] [cursor=pointer]: 💵
+        - generic [ref=e21] [cursor=pointer]: 💳
+        - generic [ref=e22] [cursor=pointer]: 🏦
+        - generic [ref=e23] [cursor=pointer]: 👛
+        - generic [ref=e24] [cursor=pointer]: 🏛️
+        - generic [ref=e25] [cursor=pointer]: 🐷
+    - generic [ref=e26]:
+      - text: Currency
+      - generic [ref=e27]: USD
+      - paragraph [ref=e28]: Currency cannot be changed after creation
+    - generic [ref=e29]:
+      - button "Cancel" [ref=e30] [cursor=pointer]
+      - button "Save" [ref=e31] [cursor=pointer]
+    - button "Delete account" [ref=e33] [cursor=pointer]
+  - generic [ref=e37]:
+    - heading "Test Account" [level=2] [ref=e38]
+    - button "Archive" [ref=e39] [cursor=pointer]
+    - button "Delete, keep history" [ref=e40] [cursor=pointer]
+    - button "Delete everything" [active] [ref=e41] [cursor=pointer]
+    - button "Cancel" [ref=e42] [cursor=pointer]
+  - generic [ref=e44]:
+    - heading "Delete everything?" [level=2] [ref=e45]
+    - paragraph [ref=e46]: This will permanently erase all transaction history. This cannot be undone.
+    - generic [ref=e47]:
+      - button "Cancel" [ref=e48] [cursor=pointer]
+      - button "Delete everything" [ref=e49] [cursor=pointer]
+  - heading "Transactions" [level=2] [ref=e34]
+  - paragraph [ref=e35]: No transactions yet.

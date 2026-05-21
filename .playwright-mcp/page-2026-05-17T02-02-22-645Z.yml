@@ -1,0 +1,26 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: U
+  - generic [ref=e6]:
+    - heading "Updated User" [level=1] [ref=e26]
+    - button "Edit display name" [ref=e27] [cursor=pointer]: Edit
+  - paragraph [ref=e9]: testuser@example.com
+  - separator [ref=e10]
+  - heading "Change Password" [level=2] [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - text: Current password
+      - textbox "Current password" [ref=e14]: WrongPass1
+    - generic [ref=e15]:
+      - text: New password
+      - textbox "New password ✓ At least 8 characters ✓ At least one uppercase letter ✓ At least one number" [ref=e28]: NewPass123
+      - list [ref=e29]:
+        - listitem [ref=e30]: ✓ At least 8 characters
+        - listitem [ref=e31]: ✓ At least one uppercase letter
+        - listitem [ref=e32]: ✓ At least one number
+    - generic [ref=e17]:
+      - text: Confirm new password
+      - textbox "Confirm new password" [ref=e18]: NewPass123
+    - button "Update password" [ref=e19] [cursor=pointer]
+    - alert [ref=e33]: Current password is incorrect
+  - separator [ref=e20]
+  - button "Sign out" [ref=e21] [cursor=pointer]

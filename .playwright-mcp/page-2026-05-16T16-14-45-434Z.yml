@@ -1,0 +1,22 @@
+- generic [ref=e4]:
+  - heading "Create an account" [level=1] [ref=e5]
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - text: Display name
+        - textbox "Display name" [ref=e9]: UI Test User
+      - generic [ref=e10]:
+        - text: Email
+        - textbox "Email" [ref=e11]: testuser@example.com
+      - generic [ref=e12]:
+        - text: Password
+        - textbox "Password ✓ At least 8 characters ✓ At least one uppercase letter ✓ At least one number" [ref=e17]: Password1
+        - list [ref=e18]:
+          - listitem [ref=e19]: ✓ At least 8 characters
+          - listitem [ref=e20]: ✓ At least one uppercase letter
+          - listitem [ref=e21]: ✓ At least one number
+      - generic [ref=e14]:
+        - text: Confirm password
+        - textbox "Confirm password" [ref=e15]: Password1
+    - button "Sign up" [ref=e16] [cursor=pointer]
+    - alert [ref=e22]: An account with this email already exists

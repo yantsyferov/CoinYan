@@ -1,0 +1,80 @@
+- main [ref=e5]:
+  - heading "Categories" [level=1] [ref=e6]
+  - generic [ref=e7]:
+    - heading "Expense Categories" [level=2] [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: 💵
+      - generic [ref=e11]: Groceries
+      - button "Edit" [active] [ref=e12] [cursor=pointer]
+      - button "Delete" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]:
+      - generic [ref=e15]: 💵
+      - generic [ref=e16]: Rent
+      - button "Edit" [ref=e17] [cursor=pointer]
+      - button "Delete" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - generic [ref=e20]: 💵
+      - generic [ref=e21]: Transport
+      - button "Edit" [ref=e22] [cursor=pointer]
+      - button "Delete" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25]: 💵
+      - generic [ref=e26]: Dining Out
+      - button "Edit" [ref=e27] [cursor=pointer]
+      - button "Delete" [ref=e28] [cursor=pointer]
+    - generic [ref=e29]:
+      - generic [ref=e30]: 💵
+      - generic [ref=e31]: Entertainment
+      - button "Edit" [ref=e32] [cursor=pointer]
+      - button "Delete" [ref=e33] [cursor=pointer]
+    - generic [ref=e34]:
+      - generic [ref=e35]: 💵
+      - generic [ref=e36]: Healthcare
+      - button "Edit" [ref=e37] [cursor=pointer]
+      - button "Delete" [ref=e38] [cursor=pointer]
+    - generic [ref=e39]:
+      - generic [ref=e40]: 💵
+      - generic [ref=e41]: Utilities
+      - button "Edit" [ref=e42] [cursor=pointer]
+      - button "Delete" [ref=e43] [cursor=pointer]
+    - generic [ref=e44]:
+      - generic [ref=e45]: 💵
+      - generic [ref=e46]: Shopping
+      - button "Edit" [ref=e47] [cursor=pointer]
+      - button "Delete" [ref=e48] [cursor=pointer]
+    - generic [ref=e49]:
+      - generic [ref=e50]: 💵
+      - generic [ref=e51]: Education
+      - button "Edit" [ref=e52] [cursor=pointer]
+      - button "Delete" [ref=e53] [cursor=pointer]
+    - generic [ref=e54]:
+      - generic [ref=e55]: 💵
+      - generic [ref=e56]: Coffee
+      - button "Edit" [ref=e57] [cursor=pointer]
+      - button "Delete" [ref=e58] [cursor=pointer]
+    - button "+" [ref=e59] [cursor=pointer]
+  - generic [ref=e60]:
+    - heading "Income Sources" [level=2] [ref=e61]
+    - generic [ref=e62]:
+      - generic [ref=e63]: 💵
+      - generic [ref=e64]: Freelance
+      - button "Edit" [ref=e65] [cursor=pointer]
+      - button "Delete" [ref=e66] [cursor=pointer]
+    - button "+" [ref=e67] [cursor=pointer]
+  - generic [ref=e69]:
+    - heading "Edit Category" [level=2] [ref=e70]
+    - generic [ref=e71]:
+      - text: Name
+      - textbox [ref=e72]: Groceries
+    - generic [ref=e73]:
+      - text: Icon
+      - generic [ref=e74]:
+        - generic [ref=e75] [cursor=pointer]: 💵
+        - generic [ref=e76] [cursor=pointer]: 💳
+        - generic [ref=e77] [cursor=pointer]: 🏦
+        - generic [ref=e78] [cursor=pointer]: 👛
+        - generic [ref=e79] [cursor=pointer]: 🏛️
+        - generic [ref=e80] [cursor=pointer]: 🐷
+    - generic [ref=e81]:
+      - button "Cancel" [ref=e82] [cursor=pointer]
+      - button "Save" [ref=e83] [cursor=pointer]
