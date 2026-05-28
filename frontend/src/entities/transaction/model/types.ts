@@ -5,6 +5,9 @@ export interface Transaction {
   accountAmount: number;
   accountCurrency: string;
   exchangeRate: number;
+  rateIsCustom?: boolean;
+  sourceCurrency?: string | null;
+  targetCurrency?: string | null;
   accountId: string;
   expenseCategoryId?: string | null;
   incomeSourceId?: string | null;
@@ -13,4 +16,5 @@ export interface Transaction {
   transferPeerId?: string;
   note?: string | null;
   createdAt: string;
+  transactionDate?: string | null;
 }

@@ -35,6 +35,7 @@ test('cancel an income transaction from the income source detail page', async ({
   const incomeRow = page.locator('[role="button"]').filter({ hasText: uniqueNote }).first();
   await expect(incomeRow).toBeVisible({ timeout: 10_000 });
   await incomeRow.click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
   // Dialog shows "Income · $80.00"
   const dialogTitle = page.locator('h3', { hasText: 'Cancel transaction?' });

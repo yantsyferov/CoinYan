@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -5,7 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_user_id
 from app.repositories.transaction_repo import TransactionRepository
-from app.schemas.transaction import CreateTransactionRequest, CreateTransferTransactionRequest, TransactionResponse
+from app.schemas.transaction import (
+    CreateTransactionRequest,
+    CreateTransferTransactionRequest,
+    CumulativeBalanceResponse,
+    TotalsByCurrencyResponse,
+    TransactionResponse,
+    UpdateTransactionRequest,
+    UpdateTransactionResponse,
+)
 
 router = APIRouter(prefix="/internal/transactions", tags=["Transactions"], redirect_slashes=False)
 
@@ -24,10 +34,14 @@ async def create_transaction(
         account_amount=account_amount,
         account_currency=body.account_currency,
         exchange_rate=body.exchange_rate,
+        source_currency=body.source_currency,
+        target_currency=body.target_currency,
+        rate_is_custom=body.rate_is_custom,
         account_id=str(body.account_id),
         expense_category_id=str(body.expense_category_id) if body.expense_category_id else None,
         income_source_id=str(body.income_source_id) if body.income_source_id else None,
         note=body.note,
+        transaction_date=body.transaction_date,
         session=session,
     )
     return row
@@ -42,19 +56,57 @@ async def create_transfer(
     debit_leg, credit_leg = await TransactionRepository.create_transfer_pair(
         user_id=user_id,
         data=body,
+        transaction_date=body.transaction_date,
         session=session,
     )
     return [TransactionResponse.model_validate(debit_leg), TransactionResponse.model_validate(credit_leg)]
+
+
+@router.get("/balance", response_model=CumulativeBalanceResponse, status_code=status.HTTP_200_OK)
+async def get_cumulative_balance(
+    date_to: datetime = Query(...),
+    user_id: str = Depends(get_user_id),
+    session: AsyncSession = Depends(get_db),
+) -> CumulativeBalanceResponse:
+    result = await TransactionRepository.get_cumulative_balance(session, user_id, date_to)
+    return CumulativeBalanceResponse(cumulative_balance=float(result) if result is not None else None)
 
 
 @router.get("/totals", status_code=status.HTTP_200_OK)
 async def get_totals(
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
+    after_date: Optional[datetime] = Query(None),
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await TransactionRepository.get_totals(user_id=user_id, session=session, year=year, month=month)
+    return await TransactionRepository.get_totals(
+        user_id=user_id,
+        session=session,
+        year=year,
+        month=month,
+        after_date=after_date,
+    )
+
+
+@router.get("/totals-by-currency", response_model=TotalsByCurrencyResponse, status_code=status.HTTP_200_OK)
+async def get_totals_by_currency(
+    entity_type: str = Query(..., description="'category' or 'income_source'"),
+    entity_id: str = Query(..., description="UUID of the entity"),
+    month: str = Query(..., description="Month in YYYY-MM format"),
+    user_id: str = Depends(get_user_id),
+    session: AsyncSession = Depends(get_db),
+) -> TotalsByCurrencyResponse:
+    if entity_type not in ("category", "income_source"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'category' or 'income_source'")
+    rows = await TransactionRepository.get_totals_by_currency(
+        session=session,
+        user_id=user_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        month=month,
+    )
+    return TotalsByCurrencyResponse(totals=[{"currency": c, "amount": a} for c, a in rows])
 
 
 @router.get("", response_model=list[TransactionResponse], status_code=status.HTTP_200_OK)
@@ -64,6 +116,8 @@ async def list_transactions(
     income_source_id: Optional[str] = Query(None),
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> list[TransactionResponse]:
@@ -77,6 +131,54 @@ async def list_transactions(
         income_source_id=income_source_id,
         year=year,
         month=month,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.patch("/{transaction_id}", response_model=UpdateTransactionResponse, status_code=status.HTTP_200_OK)
+async def update_transaction(
+    transaction_id: str,
+    body: UpdateTransactionRequest,
+    user_id: str = Depends(get_user_id),
+    session: AsyncSession = Depends(get_db),
+) -> UpdateTransactionResponse:
+    txn = await TransactionRepository.get_by_id(transaction_id, user_id, session)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    if txn.type == "transfer":
+        target, peer, old_amount, old_peer_amount = await TransactionRepository.update_transfer_pair(
+            transaction_id=uuid.UUID(transaction_id),
+            user_id=uuid.UUID(user_id),
+            amount=body.amount,
+            note=body.note,
+            session=session,
+            transaction_date=body.transaction_date,
+        )
+        return UpdateTransactionResponse(
+            transaction=TransactionResponse.model_validate(target),
+            old_account_amount=old_amount,
+            peer_transaction=TransactionResponse.model_validate(peer),
+            old_peer_account_amount=old_peer_amount,
+        )
+
+    updated_txn, old_account_amount = await TransactionRepository.update_transaction(
+        transaction_id=transaction_id,
+        user_id=user_id,
+        amount=body.amount,
+        note=body.note,
+        session=session,
+        transaction_date=body.transaction_date,
+        account_amount=body.account_amount,
+        exchange_rate=body.exchange_rate,
+        rate_is_custom=body.rate_is_custom,
+    )
+    return UpdateTransactionResponse(
+        transaction=TransactionResponse.model_validate(updated_txn),
+        old_account_amount=old_account_amount,
+        peer_transaction=None,
+        old_peer_account_amount=None,
     )
 
 

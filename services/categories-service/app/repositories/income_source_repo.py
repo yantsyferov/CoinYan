@@ -18,8 +18,8 @@ class IncomeSourceRepository:
         return list(result.scalars().all())
 
     @staticmethod
-    async def create(user_id: str, name: str, icon: str, session: AsyncSession) -> IncomeSource:
-        row = IncomeSource(user_id=UUID(user_id), name=name, icon=icon)
+    async def create(user_id: str, name: str, icon: str, session: AsyncSession, currency: str = "USD") -> IncomeSource:
+        row = IncomeSource(user_id=UUID(user_id), name=name, icon=icon, currency=currency)
         session.add(row)
         await session.flush()
         return row
@@ -35,10 +35,12 @@ class IncomeSourceRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def update(row: IncomeSource, name: str, icon: str, session: AsyncSession) -> IncomeSource:
-        """Update name and icon on an existing row, flush, and return it."""
+    async def update(row: IncomeSource, name: str, icon: str, session: AsyncSession, currency: str | None = None) -> IncomeSource:
+        """Update name, icon, and optionally currency on an existing row, flush, and return it."""
         row.name = name
         row.icon = icon
+        if currency is not None:
+            row.currency = currency
         await session.flush()
         return row
 

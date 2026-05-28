@@ -40,7 +40,7 @@ class AccountRepository:
             icon=icon,
             currency=currency,
             starting_balance=starting_balance,
-            current_balance=starting_balance,
+            current_balance=Decimal("0"),
         )
         session.add(account)
         await session.flush()

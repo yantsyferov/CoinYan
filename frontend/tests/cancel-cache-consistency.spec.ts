@@ -29,6 +29,7 @@ test('cancelling income from account detail updates home page income source tota
   const incomeRow = page.locator('[role="button"]').filter({ hasText: uniqueNote }).first();
   await expect(incomeRow).toBeVisible({ timeout: 10_000 });
   await incomeRow.click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
   const dialogTitle = page.locator('h3', { hasText: 'Cancel transaction?' });
   await expect(dialogTitle).toBeVisible({ timeout: 5_000 });

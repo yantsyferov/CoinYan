@@ -6,24 +6,24 @@ from app.repositories.income_source_repo import IncomeSourceRepository
 
 class IncomeSourceService:
     @staticmethod
-    async def create(user_id: str, name: str, icon: str, session: AsyncSession) -> IncomeSource:
+    async def create(user_id: str, name: str, icon: str, session: AsyncSession, currency: str = "USD") -> IncomeSource:
         from fastapi import HTTPException
         from sqlalchemy.exc import IntegrityError
         try:
-            return await IncomeSourceRepository.create(user_id, name, icon, session)
+            return await IncomeSourceRepository.create(user_id, name, icon, session, currency=currency)
         except IntegrityError:
             await session.rollback()
             raise HTTPException(status_code=409, detail="An income source with this name already exists")
 
     @staticmethod
-    async def update(user_id: str, id: str, name: str, icon: str, session: AsyncSession) -> IncomeSource:
+    async def update(user_id: str, id: str, name: str, icon: str, session: AsyncSession, currency: str | None = None) -> IncomeSource:
         from fastapi import HTTPException
         from sqlalchemy.exc import IntegrityError
         row = await IncomeSourceRepository.get_by_id(id, user_id, session)
         if not row:
             raise HTTPException(status_code=404, detail="Income source not found")
         try:
-            return await IncomeSourceRepository.update(row, name, icon, session)
+            return await IncomeSourceRepository.update(row, name, icon, session, currency=currency)
         except IntegrityError:
             await session.rollback()
             raise HTTPException(status_code=409, detail="An income source with this name already exists")

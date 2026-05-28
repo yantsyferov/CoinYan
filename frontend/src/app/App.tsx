@@ -13,6 +13,7 @@ import { ArchivedAccountsPage } from '../pages/accounts/archived/ArchivedAccount
 import { CategoriesPage } from '../pages/categories/CategoriesPage';
 import { ExpenseCategoryDetailPage } from '../pages/categories/ExpenseCategoryDetailPage';
 import { IncomeSourceDetailPage } from '../pages/categories/IncomeSourceDetailPage';
+import { DashboardPage } from '../pages/dashboard/DashboardPage';
 
 export function App() {
   return (
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/expense/:id" element={<ExpenseCategoryDetailPage />} />
         <Route path="/categories/income/:id" element={<IncomeSourceDetailPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
       </Route>
     </Routes>
   );

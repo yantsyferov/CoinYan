@@ -27,3 +27,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Debug screenshots in project root
+/*.png

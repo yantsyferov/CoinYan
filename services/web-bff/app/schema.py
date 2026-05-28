@@ -1,7 +1,9 @@
 import asyncio
 import base64
 import json
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Annotated
 
 import strawberry
 import httpx
@@ -62,8 +64,11 @@ class Category:
     id: strawberry.ID
     name: str
     icon: str
+    currency: str
     created_at: str
     total: float | None = None
+    monthly_limit: float | None = None
+    budget_percent: float | None = None
 
 
 @strawberry.input
@@ -114,12 +119,14 @@ class UpdateAccountInput:
 class CreateCategoryInput:
     name: str
     icon: str
+    currency: str = "USD"
 
 
 @strawberry.input
 class UpdateCategoryInput:
     name: str
     icon: str
+    currency: str | None = None
 
 
 @strawberry.type
@@ -138,6 +145,12 @@ class Transaction:
     to_account_id: strawberry.ID | None = None
     transfer_peer_id: strawberry.ID | None = None
     from_account_id: strawberry.ID | None = None
+    transaction_date: str | None = None
+    source_amount: float | None = None
+    source_currency: str | None = None
+    target_amount: float | None = None
+    target_currency: str | None = None
+    rate_is_custom: bool | None = None
 
 
 @strawberry.input
@@ -149,6 +162,10 @@ class CreateExpenseTransactionInput:
     account_currency: str = "USD"
     exchange_rate: float = 1.0
     note: str | None = None
+    transaction_date: str | None = None
+    source_currency: str | None = None
+    target_currency: str | None = None
+    rate_is_custom: bool | None = False
 
 
 @strawberry.input
@@ -160,6 +177,10 @@ class CreateIncomeTransactionInput:
     account_currency: str = "USD"
     exchange_rate: float = 1.0
     note: str | None = None
+    transaction_date: str | None = None
+    source_currency: str | None = None
+    target_currency: str | None = None
+    rate_is_custom: bool | None = False
 
 
 @strawberry.input
@@ -172,6 +193,18 @@ class CreateTransferTransactionInput:
     from_currency: str = "USD"
     to_currency: str = "USD"
     note: str | None = None
+    transaction_date: str | None = None
+
+
+@strawberry.input
+class UpdateTransactionInput:
+    id: strawberry.ID
+    amount: float
+    note: str | None = None
+    transaction_date: str | None = None
+    exchange_rate: float | None = None
+    account_amount: float | None = None
+    rate_is_custom: bool | None = None
 
 
 def _to_transaction(t: dict) -> "Transaction":
@@ -190,6 +223,12 @@ def _to_transaction(t: dict) -> "Transaction":
         to_account_id=t.get("transfer_to_account_id") or t.get("to_account_id"),
         transfer_peer_id=t.get("transfer_peer_id"),
         from_account_id=t.get("from_account_id"),
+        transaction_date=t.get("transaction_date"),
+        source_amount=float(t["amount"]),
+        source_currency=t.get("source_currency"),
+        target_amount=float(t["account_amount"]),
+        target_currency=t.get("target_currency"),
+        rate_is_custom=t.get("rate_is_custom", False),
     )
 
 
@@ -200,6 +239,26 @@ async def _adjust_balance(user_id: str, account_id: str, delta: float) -> None:
             json={"delta": delta},
             headers={"X-User-Id": user_id},
         )
+
+
+@strawberry.type
+class DashboardCategoryItem:
+    id: strawberry.ID
+    name: str
+    icon: str
+    amount: float
+    share: float
+    monthly_limit: float | None
+    budget_percent: float | None
+
+
+@strawberry.type
+class DashboardSummary:
+    total_income: float
+    total_expenses: float
+    net_balance: float
+    total_account_balance: float | None
+    categories: list[DashboardCategoryItem]
 
 
 @strawberry.enum
@@ -512,12 +571,38 @@ class Mutation:
             raise Exception(f"Failed to create account: {resp.status_code}")
 
         a = resp.json()
+        account_id = a["id"]
+        account_currency = a["currency"]
+
+        if input.starting_balance is not None and input.starting_balance > 0:
+            async with httpx.AsyncClient() as client:
+                txn_resp = await client.post(
+                    f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
+                    json={
+                        "type": "income",
+                        "amount": input.starting_balance,
+                        "account_amount": input.starting_balance,
+                        "account_currency": account_currency,
+                        "exchange_rate": 1.0,
+                        "account_id": account_id,
+                        "income_source_id": None,
+                        "note": "Initial balance",
+                    },
+                    headers={"X-User-Id": user_id},
+                )
+            if txn_resp.status_code >= 400:
+                raise Exception(f"Failed to create initial balance transaction: {txn_resp.status_code}")
+            await _adjust_balance(user_id, account_id, input.starting_balance)
+            current_balance = input.starting_balance
+        else:
+            current_balance = float(a["current_balance"])
+
         return Account(
-            id=a["id"],
+            id=account_id,
             name=a["name"],
             icon=a["icon"],
-            currency=a["currency"],
-            current_balance=float(a["current_balance"]),
+            currency=account_currency,
+            current_balance=current_balance,
             status=a["status"],
             deleted_at=a.get("deleted_at"),
             created_at=a["created_at"],
@@ -592,7 +677,7 @@ class Mutation:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.CATEGORIES_SERVICE_URL}/internal/expense-categories",
-                json={"name": input.name, "icon": input.icon},
+                json={"name": input.name, "icon": input.icon, "currency": input.currency},
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code == 409:
@@ -603,7 +688,7 @@ class Mutation:
         if resp.status_code >= 400:
             raise Exception(f"Failed to create expense category: {resp.status_code}")
         c = resp.json()
-        return Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"])
+        return Category(id=c["id"], name=c["name"], icon=c["icon"], currency=c.get("currency", "USD"), created_at=c["created_at"])
 
     @strawberry.mutation
     async def create_income_source(self, input: CreateCategoryInput, info: Info) -> Category:
@@ -614,7 +699,7 @@ class Mutation:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.CATEGORIES_SERVICE_URL}/internal/income-sources",
-                json={"name": input.name, "icon": input.icon},
+                json={"name": input.name, "icon": input.icon, "currency": input.currency},
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code == 409:
@@ -625,7 +710,7 @@ class Mutation:
         if resp.status_code >= 400:
             raise Exception(f"Failed to create income source: {resp.status_code}")
         c = resp.json()
-        return Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"])
+        return Category(id=c["id"], name=c["name"], icon=c["icon"], currency=c.get("currency", "USD"), created_at=c["created_at"])
 
     @strawberry.mutation
     async def update_expense_category(self, id: strawberry.ID, input: UpdateCategoryInput, info: Info) -> Category:
@@ -633,10 +718,13 @@ class Mutation:
         user_id = _extract_user_id(request.headers.get("authorization", ""))
         if not user_id:
             raise Exception("Unauthorized")
+        payload: dict = {"name": input.name, "icon": input.icon}
+        if input.currency is not None:
+            payload["currency"] = input.currency
         async with httpx.AsyncClient() as client:
             resp = await client.patch(
                 f"{settings.CATEGORIES_SERVICE_URL}/internal/expense-categories/{id}",
-                json={"name": input.name, "icon": input.icon},
+                json=payload,
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code == 404:
@@ -646,7 +734,7 @@ class Mutation:
         if resp.status_code >= 400:
             raise Exception(f"Failed to update expense category: {resp.status_code}")
         c = resp.json()
-        return Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"])
+        return Category(id=c["id"], name=c["name"], icon=c["icon"], currency=c.get("currency", "USD"), created_at=c["created_at"])
 
     @strawberry.mutation
     async def update_income_source(self, id: strawberry.ID, input: UpdateCategoryInput, info: Info) -> Category:
@@ -654,10 +742,13 @@ class Mutation:
         user_id = _extract_user_id(request.headers.get("authorization", ""))
         if not user_id:
             raise Exception("Unauthorized")
+        payload: dict = {"name": input.name, "icon": input.icon}
+        if input.currency is not None:
+            payload["currency"] = input.currency
         async with httpx.AsyncClient() as client:
             resp = await client.patch(
                 f"{settings.CATEGORIES_SERVICE_URL}/internal/income-sources/{id}",
-                json={"name": input.name, "icon": input.icon},
+                json=payload,
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code == 404:
@@ -667,7 +758,7 @@ class Mutation:
         if resp.status_code >= 400:
             raise Exception(f"Failed to update income source: {resp.status_code}")
         c = resp.json()
-        return Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"])
+        return Category(id=c["id"], name=c["name"], icon=c["icon"], currency=c.get("currency", "USD"), created_at=c["created_at"])
 
     @strawberry.mutation
     async def delete_expense_category(self, id: strawberry.ID, info: Info) -> bool:
@@ -700,6 +791,76 @@ class Mutation:
         return resp.status_code == 204
 
     @strawberry.mutation
+    async def set_expense_category_limit(
+        self, id: strawberry.ID, monthly_limit: float | None, info: Info
+    ) -> list[Category]:
+        request = info.context["request"]
+        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        if not user_id:
+            raise Exception("Unauthorized")
+
+        async with httpx.AsyncClient() as client:
+            if monthly_limit is None or monthly_limit <= 0:
+                resp = await client.delete(
+                    f"{settings.BUDGETS_SERVICE_URL}/internal/budget-limits/{id}",
+                    headers={"X-User-Id": user_id},
+                )
+                # 404 is acceptable — limit was already absent
+                if resp.status_code >= 400 and resp.status_code != 404:
+                    raise Exception(f"Failed to remove budget limit: {resp.status_code}")
+            else:
+                resp = await client.put(
+                    f"{settings.BUDGETS_SERVICE_URL}/internal/budget-limits/{id}",
+                    json={"amount": monthly_limit},
+                    headers={"X-User-Id": user_id},
+                )
+                if resp.status_code >= 400:
+                    raise Exception(f"Failed to set budget limit: {resp.status_code}")
+
+        # Re-fetch all three sources to return a fully refreshed list
+        async with httpx.AsyncClient() as client:
+            cats_resp, totals_resp, budgets_resp = await asyncio.gather(
+                client.get(
+                    f"{settings.CATEGORIES_SERVICE_URL}/internal/expense-categories",
+                    headers={"X-User-Id": user_id},
+                ),
+                client.get(
+                    f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals",
+                    headers={"X-User-Id": user_id},
+                ),
+                client.get(
+                    f"{settings.BUDGETS_SERVICE_URL}/internal/budget-limits",
+                    headers={"X-User-Id": user_id},
+                ),
+            )
+        if cats_resp.status_code >= 400:
+            raise Exception(f"Failed to fetch expense categories: {cats_resp.status_code}")
+        totals: dict = {}
+        if totals_resp.status_code == 200:
+            totals = totals_resp.json().get("expense_categories", {})
+        budgets: dict[str, float] = {}
+        if budgets_resp.status_code == 200:
+            for entry in budgets_resp.json():
+                budgets[entry["expense_category_id"]] = float(entry["amount"])
+        return [
+            Category(
+                id=c["id"],
+                name=c["name"],
+                icon=c["icon"],
+                currency=c.get("currency", "USD"),
+                created_at=c["created_at"],
+                total=totals.get(c["id"]),
+                monthly_limit=budgets.get(c["id"]),
+                budget_percent=(
+                    (totals.get(c["id"], 0) / budgets.get(c["id"]) * 100)
+                    if budgets.get(c["id"])
+                    else None
+                ),
+            )
+            for c in cats_resp.json()
+        ]
+
+    @strawberry.mutation
     async def create_expense_transaction(
         self, input: CreateExpenseTransactionInput, info: Info
     ) -> Transaction:
@@ -719,6 +880,10 @@ class Mutation:
                     "account_id": str(input.account_id),
                     "expense_category_id": str(input.expense_category_id),
                     "note": input.note,
+                    "transaction_date": input.transaction_date,
+                    "source_currency": input.source_currency or "USD",
+                    "target_currency": input.target_currency or "USD",
+                    "rate_is_custom": input.rate_is_custom or False,
                 },
                 headers={"X-User-Id": user_id},
             )
@@ -748,6 +913,10 @@ class Mutation:
                     "account_id": str(input.account_id),
                     "income_source_id": str(input.income_source_id),
                     "note": input.note,
+                    "transaction_date": input.transaction_date,
+                    "source_currency": input.source_currency or "USD",
+                    "target_currency": input.target_currency or "USD",
+                    "rate_is_custom": input.rate_is_custom or False,
                 },
                 headers={"X-User-Id": user_id},
             )
@@ -787,6 +956,78 @@ class Mutation:
         return True
 
     @strawberry.mutation
+    async def update_transaction(
+        self, input: UpdateTransactionInput, info: Info
+    ) -> Transaction:
+        request = info.context["request"]
+        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        if not user_id:
+            raise Exception("Unauthorized")
+
+        patch_payload: dict = {
+            "amount": input.amount,
+            "note": input.note,
+            "transaction_date": input.transaction_date,
+        }
+        if input.exchange_rate is not None:
+            patch_payload["exchange_rate"] = input.exchange_rate
+        if input.account_amount is not None:
+            patch_payload["account_amount"] = input.account_amount
+        if input.rate_is_custom is not None:
+            patch_payload["rate_is_custom"] = input.rate_is_custom
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.patch(
+                f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/{input.id}",
+                json=patch_payload,
+                headers={"X-User-Id": user_id},
+            )
+
+        if resp.status_code == 404:
+            raise Exception("Transaction not found")
+        if resp.status_code >= 400:
+            raise Exception(f"Failed to update transaction: {resp.status_code}")
+
+        data = resp.json()
+        transaction = data["transaction"]
+        old_account_amount = float(data["old_account_amount"])
+        new_account_amount = float(transaction["account_amount"])
+
+        txn_type = transaction["type"]
+        if txn_type == "expense":
+            delta = -(new_account_amount - old_account_amount)
+            await _adjust_balance(user_id, transaction["account_id"], delta)
+        elif txn_type == "income":
+            delta = new_account_amount - old_account_amount
+            await _adjust_balance(user_id, transaction["account_id"], delta)
+        elif txn_type == "transfer":
+            peer_transaction = data.get("peer_transaction")
+            old_peer_account_amount = float(data["old_peer_account_amount"]) if data.get("old_peer_account_amount") is not None else old_account_amount
+            new_peer_account_amount = float(peer_transaction["account_amount"]) if peer_transaction else new_account_amount
+
+            # Determine which leg is debit (from) and which is credit (to)
+            # The debit leg has from_account_id set; the credit leg has transfer_to_account_id set
+            if transaction.get("from_account_id"):
+                # transaction is the debit (from) leg
+                from_delta = -(new_account_amount - old_account_amount)
+                to_delta = new_peer_account_amount - old_peer_account_amount
+                await asyncio.gather(
+                    _adjust_balance(user_id, transaction["from_account_id"], from_delta),
+                    _adjust_balance(user_id, transaction["transfer_to_account_id"], to_delta),
+                )
+            else:
+                # transaction is the credit (to) leg; peer is the debit leg
+                to_delta = new_account_amount - old_account_amount
+                from_delta = -(new_peer_account_amount - old_peer_account_amount)
+                from_account_id = peer_transaction["from_account_id"] if peer_transaction else transaction["account_id"]
+                await asyncio.gather(
+                    _adjust_balance(user_id, from_account_id, from_delta),
+                    _adjust_balance(user_id, transaction["account_id"], to_delta),
+                )
+
+        return _to_transaction(transaction)
+
+    @strawberry.mutation
     async def create_transfer_transaction(
         self, input: CreateTransferTransactionInput, info: Info
     ) -> Transaction:
@@ -796,19 +1037,22 @@ class Mutation:
             raise Exception("Unauthorized")
 
         # Step 1: create the two linked transaction rows in transactions-service
+        transfer_payload: dict = {
+            "from_account_id": str(input.from_account_id),
+            "to_account_id": str(input.to_account_id),
+            "from_amount": input.from_amount,
+            "to_amount": input.to_amount,
+            "from_currency": input.from_currency,
+            "to_currency": input.to_currency,
+            "exchange_rate": input.exchange_rate,
+            "note": input.note,
+        }
+        if input.transaction_date is not None:
+            transfer_payload["transaction_date"] = input.transaction_date
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/transfer",
-                json={
-                    "from_account_id": str(input.from_account_id),
-                    "to_account_id": str(input.to_account_id),
-                    "from_amount": input.from_amount,
-                    "to_amount": input.to_amount,
-                    "from_currency": input.from_currency,
-                    "to_currency": input.to_currency,
-                    "exchange_rate": input.exchange_rate,
-                    "note": input.note,
-                },
+                json=transfer_payload,
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
@@ -825,6 +1069,21 @@ class Mutation:
         )
 
         return _to_transaction(debit_leg)
+
+
+@strawberry.type
+class CurrencyTotal:
+    currency: str
+    amount: float
+
+
+@strawberry.type
+class ExchangeRateResult:
+    from_currency: str = strawberry.field(name="from")
+    to_currency: str = strawberry.field(name="to")
+    date: str
+    rate: float | None
+    stale: bool
 
 
 @strawberry.type
@@ -923,7 +1182,7 @@ class Query:
         if not user_id:
             raise Exception("Unauthorized")
         async with httpx.AsyncClient() as client:
-            cats_resp, totals_resp = await asyncio.gather(
+            cats_resp, totals_resp, budgets_resp = await asyncio.gather(
                 client.get(
                     f"{settings.CATEGORIES_SERVICE_URL}/internal/expense-categories",
                     headers={"X-User-Id": user_id},
@@ -932,14 +1191,35 @@ class Query:
                     f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals",
                     headers={"X-User-Id": user_id},
                 ),
+                client.get(
+                    f"{settings.BUDGETS_SERVICE_URL}/internal/budget-limits",
+                    headers={"X-User-Id": user_id},
+                ),
             )
         if cats_resp.status_code >= 400:
             raise Exception(f"Failed to fetch expense categories: {cats_resp.status_code}")
         totals: dict = {}
         if totals_resp.status_code == 200:
             totals = totals_resp.json().get("expense_categories", {})
+        budgets: dict[str, float] = {}
+        if budgets_resp.status_code == 200:
+            for entry in budgets_resp.json():
+                budgets[entry["expense_category_id"]] = float(entry["amount"])
         return [
-            Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"], total=totals.get(c["id"]))
+            Category(
+                id=c["id"],
+                name=c["name"],
+                icon=c["icon"],
+                currency=c.get("currency", "USD"),
+                created_at=c["created_at"],
+                total=totals.get(c["id"]),
+                monthly_limit=budgets.get(c["id"]),
+                budget_percent=(
+                    (totals.get(c["id"], 0) / budgets.get(c["id"]) * 100)
+                    if budgets.get(c["id"])
+                    else None
+                ),
+            )
             for c in cats_resp.json()
         ]
 
@@ -966,12 +1246,12 @@ class Query:
         if totals_resp.status_code == 200:
             totals = totals_resp.json().get("income_sources", {})
         return [
-            Category(id=c["id"], name=c["name"], icon=c["icon"], created_at=c["created_at"], total=totals.get(c["id"]))
+            Category(id=c["id"], name=c["name"], icon=c["icon"], currency=c.get("currency", "USD"), created_at=c["created_at"], total=totals.get(c["id"]))
             for c in srcs_resp.json()
         ]
 
     @strawberry.field
-    async def account_transactions(self, account_id: strawberry.ID, info: Info) -> list[Transaction]:
+    async def account_transactions(self, account_id: strawberry.ID, info: Info, limit: int = 50, offset: int = 0) -> list[Transaction]:
         request = info.context["request"]
         user_id = _extract_user_id(request.headers.get("authorization", ""))
         if not user_id:
@@ -979,7 +1259,7 @@ class Query:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
-                params={"account_id": str(account_id)},
+                params={"account_id": str(account_id), "limit": limit, "offset": offset},
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
@@ -988,7 +1268,7 @@ class Query:
 
     @strawberry.field
     async def expense_category_transactions(
-        self, category_id: strawberry.ID, info: Info
+        self, category_id: strawberry.ID, info: Info, limit: int = 50, offset: int = 0
     ) -> list[Transaction]:
         request = info.context["request"]
         user_id = _extract_user_id(request.headers.get("authorization", ""))
@@ -997,7 +1277,7 @@ class Query:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
-                params={"expense_category_id": str(category_id)},
+                params={"expense_category_id": str(category_id), "limit": limit, "offset": offset},
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
@@ -1006,7 +1286,7 @@ class Query:
 
     @strawberry.field
     async def income_source_transactions(
-        self, source_id: strawberry.ID, info: Info
+        self, source_id: strawberry.ID, info: Info, limit: int = 50, offset: int = 0
     ) -> list[Transaction]:
         request = info.context["request"]
         user_id = _extract_user_id(request.headers.get("authorization", ""))
@@ -1015,12 +1295,200 @@ class Query:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
-                params={"income_source_id": str(source_id)},
+                params={"income_source_id": str(source_id), "limit": limit, "offset": offset},
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
             raise Exception(f"Failed to fetch transactions: {resp.status_code}")
         return [_to_transaction(t) for t in resp.json()]
+
+    @strawberry.field
+    async def dashboard(
+        self, info: Info, year: int | None = None, month: int | None = None
+    ) -> DashboardSummary:
+        request = info.context["request"]
+        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        if not user_id:
+            raise Exception("Unauthorized")
+
+        totals_params: dict = {}
+        if year is not None:
+            totals_params["year"] = year
+        if month is not None:
+            totals_params["month"] = month
+
+        # Compute the cutoff datetime for the balance endpoint
+        now = datetime.now(timezone.utc)
+        _year = year if year is not None else now.year
+        _month = month if month is not None else now.month
+        if (_year, _month) == (now.year, now.month):
+            cutoff = now
+        else:
+            # Use midnight at the start of the next month as the exclusive upper bound
+            if _month == 12:
+                cutoff = datetime(_year + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                cutoff = datetime(_year, _month + 1, 1, tzinfo=timezone.utc)
+
+        async with httpx.AsyncClient() as client:
+            totals_resp, balance_resp, budgets_resp, cats_resp = await asyncio.gather(
+                client.get(
+                    f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals",
+                    params=totals_params,
+                    headers={"X-User-Id": user_id},
+                ),
+                client.get(
+                    f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/balance",
+                    params={"date_to": cutoff.isoformat()},
+                    headers={"X-User-Id": user_id},
+                ),
+                client.get(
+                    f"{settings.BUDGETS_SERVICE_URL}/internal/budget-limits",
+                    headers={"X-User-Id": user_id},
+                ),
+                client.get(
+                    f"{settings.CATEGORIES_SERVICE_URL}/internal/expense-categories",
+                    headers={"X-User-Id": user_id},
+                ),
+            )
+
+        # Critical service — return zeroed summary on failure
+        if totals_resp.status_code >= 400:
+            return DashboardSummary(
+                total_income=0.0,
+                total_expenses=0.0,
+                net_balance=0.0,
+                total_account_balance=None,
+                categories=[],
+            )
+
+        totals_data = totals_resp.json()
+        expense_totals: dict[str, float] = {
+            k: float(v) for k, v in totals_data.get("expense_categories", {}).items()
+        }
+        income_totals: dict[str, float] = {
+            k: float(v) for k, v in totals_data.get("income_sources", {}).items()
+        }
+
+        total_income = sum(income_totals.values())
+        total_expenses = sum(expense_totals.values())
+        net_balance = total_income - total_expenses
+
+        # Cumulative balance from the transactions-service balance endpoint
+        total_account_balance: float | None = None
+        if balance_resp.status_code == 200:
+            total_account_balance = balance_resp.json().get("cumulative_balance")
+
+        # Non-critical services — degrade gracefully on failure
+        budgets: dict[str, float] = {}
+        if budgets_resp.status_code == 200:
+            for entry in budgets_resp.json():
+                budgets[entry["expense_category_id"]] = float(entry["amount"])
+
+        cats_by_id: dict[str, dict] = {}
+        if cats_resp.status_code == 200:
+            for c in cats_resp.json():
+                cats_by_id[c["id"]] = c
+
+        category_items: list[DashboardCategoryItem] = []
+        for cat_id, amount in expense_totals.items():
+            if amount <= 0:
+                continue
+            cat = cats_by_id.get(cat_id)
+            if cat is None:
+                continue
+            share = (amount / total_expenses * 100) if total_expenses > 0 else 0.0
+            budget_amount = budgets.get(cat_id)
+            budget_percent = (amount / budget_amount * 100) if budget_amount else None
+            category_items.append(
+                DashboardCategoryItem(
+                    id=cat_id,
+                    name=cat["name"],
+                    icon=cat["icon"],
+                    amount=amount,
+                    share=share,
+                    monthly_limit=budget_amount,
+                    budget_percent=budget_percent,
+                )
+            )
+
+        category_items.sort(key=lambda x: x.amount, reverse=True)
+
+        return DashboardSummary(
+            total_income=total_income,
+            total_expenses=total_expenses,
+            net_balance=net_balance,
+            total_account_balance=total_account_balance,
+            categories=category_items,
+        )
+
+    @strawberry.field
+    async def category_totals_by_currency(
+        self, info: Info, category_id: strawberry.ID, month: str
+    ) -> list[CurrencyTotal]:
+        request = info.context["request"]
+        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        if not user_id:
+            raise Exception("Unauthorized")
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals-by-currency",
+                params={"entity_type": "category", "entity_id": str(category_id), "month": month},
+                headers={"X-User-Id": user_id},
+            )
+        if resp.status_code >= 400:
+            raise Exception(f"Failed to fetch category totals by currency: {resp.status_code}")
+        return [
+            CurrencyTotal(currency=item["currency"], amount=float(item["amount"]))
+            for item in resp.json().get("totals", [])
+        ]
+
+    @strawberry.field
+    async def income_totals_by_currency(
+        self, info: Info, income_source_id: strawberry.ID, month: str
+    ) -> list[CurrencyTotal]:
+        request = info.context["request"]
+        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        if not user_id:
+            raise Exception("Unauthorized")
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals-by-currency",
+                params={"entity_type": "income_source", "entity_id": str(income_source_id), "month": month},
+                headers={"X-User-Id": user_id},
+            )
+        if resp.status_code >= 400:
+            raise Exception(f"Failed to fetch income totals by currency: {resp.status_code}")
+        return [
+            CurrencyTotal(currency=item["currency"], amount=float(item["amount"]))
+            for item in resp.json().get("totals", [])
+        ]
+
+    @strawberry.field
+    async def exchange_rate(
+        self,
+        info: strawberry.types.Info,
+        from_currency: Annotated[str, strawberry.argument(name="from")],
+        to_currency: Annotated[str, strawberry.argument(name="to")],
+        date: str | None = None,
+    ) -> ExchangeRateResult | None:
+        try:
+            url = f"{settings.RATES_SERVICE_URL}/internal/rates/rate?from={from_currency}&to={to_currency}"
+            if date is not None:
+                url += f"&date={date}"
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            return ExchangeRateResult(
+                from_currency=data["from"],
+                to_currency=data["to"],
+                date=data["date"],
+                rate=float(data["rate"]) if data.get("rate") is not None else None,
+                stale=bool(data.get("stale", False)),
+            )
+        except Exception:
+            return None
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

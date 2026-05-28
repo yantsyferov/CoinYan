@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
 import { useAccounts, ACCOUNTS_QUERY } from '../../entities/account';
@@ -6,16 +6,14 @@ import { ACCOUNT_TRANSACTIONS_QUERY, CANCEL_TRANSACTION_MUTATION } from '../../e
 import { INCOME_SOURCES_QUERY, EXPENSE_CATEGORIES_QUERY } from '../../entities/category';
 import { ACCOUNT_ICONS } from '../../shared/lib/account-icons';
 import { formatCurrency } from '../../shared/lib/format-currency';
+import { formatDate } from '../../shared/lib/format-date';
 import { EditAccountModal } from '../../features/account/edit-account';
+import { EditTransactionDialog } from '../../features/transaction/EditTransactionDialog';
 import type { Transaction } from '../../entities/transaction';
+import { groupByMonth } from '../../shared/lib/group-by-month';
 
 interface AccountTransactionsData {
   accountTransactions: Transaction[];
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function AccountDetailPage() {
@@ -23,18 +21,55 @@ export function AccountDetailPage() {
   const navigate = useNavigate();
   const [showEdit, setShowEdit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState<{ id: string; type: string; amount: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ txn: Transaction; x: number; y: number } | null>(null);
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null);
 
   const { accounts, loading: loadingAccounts } = useAccounts();
   const account = accounts.find((a) => a.id === id);
 
-  const { data, loading: loadingTxns } = useQuery<AccountTransactionsData>(
+  const LIMIT = 50;
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const { data, loading: loadingTxns, fetchMore } = useQuery<AccountTransactionsData>(
     ACCOUNT_TRANSACTIONS_QUERY,
     {
-      variables: { accountId: id },
+      variables: { accountId: id, limit: LIMIT, offset: 0 },
       skip: !id,
       fetchPolicy: 'cache-and-network',
     },
   );
+
+  useEffect(() => {
+    const fresh = data?.accountTransactions ?? [];
+    setAllTransactions(fresh);
+    setHasMore(fresh.length >= LIMIT);
+  }, [data]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isFetchingMore) {
+          setIsFetchingMore(true);
+          fetchMore({
+            variables: { offset: allTransactions.length },
+          }).then((result) => {
+            const next = result.data?.accountTransactions ?? [];
+            setAllTransactions((prev) => [...prev, ...next]);
+            setHasMore(next.length >= LIMIT);
+            setIsFetchingMore(false);
+          }).catch(() => setIsFetchingMore(false));
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, allTransactions.length, fetchMore]);
 
   const [cancelTransaction, { loading: cancelling }] = useMutation(
     CANCEL_TRANSACTION_MUTATION,
@@ -48,7 +83,7 @@ export function AccountDetailPage() {
     },
   );
 
-  const transactions = data?.accountTransactions ?? [];
+  const groupedTransactions = useMemo(() => groupByMonth(allTransactions), [allTransactions]);
 
   const handleConfirmCancel = async () => {
     if (!confirmCancel) return;
@@ -146,102 +181,175 @@ export function AccountDetailPage() {
           Transactions
         </h2>
 
-        {transactions.length === 0 ? (
+        {allTransactions.length === 0 ? (
           <p style={{ color: '#94A3B8', fontSize: 14, textAlign: 'center', padding: '32px 0' }}>
             No transactions yet.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {transactions.map((txn) => {
-              if (txn.type === 'transfer') {
-                const isIncoming = txn.toAccountId === account.id;
-                const counterpartId = isIncoming ? txn.fromAccountId : txn.toAccountId;
-                const counterpart = counterpartId ? accounts.find((a) => a.id === counterpartId) : undefined;
-                const counterpartLabel = counterpart ? counterpart.name : 'Transfer';
-                return (
-                  <div
-                    key={txn.id}
-                    onClick={() => setConfirmCancel({ id: txn.id, type: txn.type, amount: txn.amount })}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') setConfirmCancel({ id: txn.id, type: txn.type, amount: txn.amount });
-                    }}
-                    style={{
-                      backgroundColor: '#FAFAFF',
-                      borderRadius: 12,
-                      padding: '14px 16px',
-                      marginBottom: 8,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                      borderLeft: '3px solid #7C3AED',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>{formatDate(txn.createdAt)}</div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: '#0F172A' }}>
-                        <span style={{ marginRight: 6 }}>⇄</span>
-                        {txn.note ? `${txn.note} · ${counterpartLabel}` : counterpartLabel}
+            {groupedTransactions.map((group) => (
+              <div key={group.label}>
+                <div style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#94A3B8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '16px 0 8px',
+                }}>
+                  {group.label}
+                </div>
+                {group.transactions.map((txn) => {
+                  if (txn.type === 'transfer') {
+                    const isIncoming = txn.toAccountId === account.id;
+                    const counterpartId = isIncoming ? txn.fromAccountId : txn.toAccountId;
+                    const counterpart = counterpartId ? accounts.find((a) => a.id === counterpartId) : undefined;
+                    const counterpartLabel = counterpart ? counterpart.name : 'Transfer';
+                    return (
+                      <div
+                        key={txn.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenu({ txn, x: e.clientX, y: e.clientY });
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') setContextMenu({ txn, x: 0, y: 0 });
+                        }}
+                        style={{
+                          backgroundColor: '#FAFAFF',
+                          borderRadius: 12,
+                          padding: '14px 16px',
+                          marginBottom: 8,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                          borderLeft: '3px solid #7C3AED',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>{formatDate(txn.transactionDate ?? txn.createdAt)}</div>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: '#0F172A' }}>
+                            <span style={{ marginRight: 6 }}>⇄</span>
+                            {txn.note ? `${txn.note} · ${counterpartLabel}` : counterpartLabel}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: isIncoming ? '#10B981' : '#EF4444',
+                          }}
+                        >
+                          {isIncoming ? '+' : '−'}
+                          {formatCurrency(txn.amount)}
+                        </div>
                       </div>
-                    </div>
+                    );
+                  }
+
+                  return (
                     <div
+                      key={txn.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContextMenu({ txn, x: e.clientX, y: e.clientY });
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') setContextMenu({ txn, x: 0, y: 0 });
+                      }}
                       style={{
-                        fontSize: 16,
-                        fontWeight: 700,
-                        color: isIncoming ? '#10B981' : '#EF4444',
+                        backgroundColor: '#fff',
+                        borderRadius: 12,
+                        padding: '14px 16px',
+                        marginBottom: 8,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
                       }}
                     >
-                      {isIncoming ? '+' : '−'}
-                      {formatCurrency(txn.amount)}
+                      <div>
+                        <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>{formatDate(txn.transactionDate ?? txn.createdAt)}</div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: '#0F172A' }}>
+                          {txn.note ?? txn.type}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: txn.type === 'expense' ? '#EF4444' : '#10B981',
+                        }}
+                      >
+                        {txn.type === 'expense' ? '−' : '+'}
+                        {formatCurrency(txn.amount)}
+                      </div>
                     </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={txn.id}
-                  onClick={() => setConfirmCancel({ id: txn.id, type: txn.type, amount: txn.amount })}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') setConfirmCancel({ id: txn.id, type: txn.type, amount: txn.amount });
-                  }}
-                  style={{
-                    backgroundColor: '#fff',
-                    borderRadius: 12,
-                    padding: '14px 16px',
-                    marginBottom: 8,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>{formatDate(txn.createdAt)}</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#0F172A' }}>
-                      {txn.note ?? txn.type}
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: txn.type === 'expense' ? '#EF4444' : '#10B981',
-                    }}
-                  >
-                    {txn.type === 'expense' ? '−' : '+'}
-                    {formatCurrency(txn.amount)}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ))}
+            {isFetchingMore && (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#94A3B8', fontSize: 13 }}>
+                Loading...
+              </div>
+            )}
+            <div ref={sentinelRef} style={{ height: 1 }} />
           </div>
+        )}
+
+        {/* Context menu */}
+        {contextMenu && (
+          <>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 100 }}
+              onClick={() => setContextMenu(null)}
+            />
+            <div style={{
+              position: 'fixed',
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 101,
+              background: 'white',
+              borderRadius: 12,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              minWidth: 140,
+            }}>
+              <button
+                style={{ display: 'block', width: '100%', padding: '12px 20px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 15 }}
+                onClick={() => {
+                  setEditTarget(contextMenu.txn);
+                  setContextMenu(null);
+                }}
+              >
+                Edit
+              </button>
+              <button
+                style={{ display: 'block', width: '100%', padding: '12px 20px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: '#ef4444' }}
+                onClick={() => {
+                  setConfirmCancel({ id: contextMenu.txn.id, type: contextMenu.txn.type, amount: contextMenu.txn.amount });
+                  setContextMenu(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+
+        {editTarget && (
+          <EditTransactionDialog
+            transaction={editTarget}
+            onClose={() => setEditTarget(null)}
+          />
         )}
 
         {/* Cancel transaction confirmation dialog */}

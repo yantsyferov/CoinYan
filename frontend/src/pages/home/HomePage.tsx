@@ -43,6 +43,10 @@ interface PendingTransaction {
   toId: string;
   toName: string;
   accountCurrency: string;
+  fromCurrency?: string;
+  toCurrency?: string;
+  monthlyLimit?: number | null;
+  monthlySpent?: number;
 }
 
 // ---- Draggable Account Item ----
@@ -173,6 +177,11 @@ function DroppableExpenseItem({
   const icon = ACCOUNT_ICONS[category.icon] ?? category.icon ?? '🧾';
   const subtitle = formatCurrency(category.total ?? 0);
 
+  const budgetRatio =
+    category.monthlyLimit != null && category.monthlyLimit > 0
+      ? (category.total ?? 0) / category.monthlyLimit
+      : undefined;
+
   return (
     <div onClick={() => onTap(category)}>
       <CircleItem
@@ -181,6 +190,7 @@ function DroppableExpenseItem({
         subtitle={subtitle}
         highlighted={shouldHighlight}
         dragRef={setNodeRef}
+        budgetRatio={budgetRatio}
       />
     </div>
   );
@@ -359,6 +369,10 @@ export function HomePage() {
           toId: categoryId,
           toName: category.name,
           accountCurrency: account.currency,
+          fromCurrency: account.currency,
+          toCurrency: category.currency,
+          monthlyLimit: category.monthlyLimit,
+          monthlySpent: category.total ?? 0,
         });
       }
     }
@@ -389,6 +403,8 @@ export function HomePage() {
           toId: accountId,
           toName: account.name,
           accountCurrency: account.currency,
+          fromCurrency: source.currency,
+          toCurrency: account.currency,
         });
       }
     }
@@ -522,6 +538,10 @@ export function HomePage() {
           toId={pendingTransaction.toId}
           toName={pendingTransaction.toName}
           accountCurrency={pendingTransaction.accountCurrency}
+          fromCurrency={pendingTransaction.fromCurrency}
+          toCurrency={pendingTransaction.toCurrency}
+          toMonthlyLimit={pendingTransaction.monthlyLimit}
+          toMonthlySpent={pendingTransaction.monthlySpent}
           onClose={() => setPendingTransaction(null)}
         />
       )}

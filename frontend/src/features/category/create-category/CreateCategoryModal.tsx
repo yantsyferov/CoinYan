@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@apollo/client';
 import type { DocumentNode } from '@apollo/client';
 import { ACCOUNT_ICONS, ICON_KEYS } from '../../../shared/lib/account-icons';
+import { CurrencyPicker } from '../../../shared/ui/CurrencyPicker';
 
 interface Props {
   onClose: () => void;
@@ -34,6 +35,7 @@ const labelStyle: React.CSSProperties = {
 export function CreateCategoryModal({ onClose, mutationDocument, refetchQuery, title }: Props) {
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(ICON_KEYS[0]);
+  const [currency, setCurrency] = useState('USD');
   const [nameError, setNameError] = useState('');
   const [serverError, setServerError] = useState('');
 
@@ -56,6 +58,7 @@ export function CreateCategoryModal({ onClose, mutationDocument, refetchQuery, t
           input: {
             name: name.trim(),
             icon: selectedIcon,
+            currency,
           },
         },
       });
@@ -139,6 +142,9 @@ export function CreateCategoryModal({ onClose, mutationDocument, refetchQuery, t
             ))}
           </div>
         </div>
+
+        {/* Currency picker */}
+        <CurrencyPicker value={currency} onChange={setCurrency} label="Currency" />
 
         {serverError && (
           <p style={{ color: '#EF4444', fontSize: 13, margin: 0 }}>{serverError}</p>

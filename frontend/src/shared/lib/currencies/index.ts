@@ -1,6 +1,29 @@
 export interface Currency {
   code: string;
   name: string;
+  symbol?: string;
+}
+
+export const SUPPORTED_CURRENCIES: { code: string; name: string; symbol: string }[] = [
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'UAH', name: 'Ukrainian Hryvnia', symbol: '₴' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+  { code: 'PLN', name: 'Polish Złoty', symbol: 'zł' },
+  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč' },
+  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft' },
+  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
+  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr' },
+  { code: 'DKK', name: 'Danish Krone', symbol: 'kr' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+];
+
+export function getCurrencySymbol(code: string): string {
+  return SUPPORTED_CURRENCIES.find((c) => c.code === code)?.symbol ?? code;
 }
 
 export const CURRENCIES: Currency[] = [

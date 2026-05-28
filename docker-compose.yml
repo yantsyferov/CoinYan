@@ -138,6 +138,59 @@ services:
       DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@transactions-db:5432/transactions_db
       SENTRY_DSN: ""
 
+  budgets-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: coinyan
+      POSTGRES_PASSWORD: coinyan
+      POSTGRES_DB: budgets_db
+    volumes:
+      - budgets-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinyan -d budgets_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  budgets-service:
+    build:
+      context: ./services/budgets-service
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    depends_on:
+      budgets-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://coinyan:coinyan@budgets-db:5432/budgets_db
+      JWT_SECRET: dev-secret-change-in-production
+      SENTRY_DSN: ""
+
+  rates-redis:
+    image: redis:7-alpine
+    container_name: rates-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  rates-service:
+    build:
+      context: ./services/rates-service
+      dockerfile: Dockerfile
+    ports:
+      - "8006:8006"
+    depends_on:
+      rates-redis:
+        condition: service_healthy
+    environment:
+      OPEN_EXCHANGE_RATES_APP_ID: ""
+      REDIS_URL: redis://rates-redis:6379/0
+      SENTRY_DSN: ""
+
   web-bff:
     build:
       context: ./services/web-bff
@@ -153,11 +206,17 @@ services:
         condition: service_started
       transactions-service:
         condition: service_started
+      budgets-service:
+        condition: service_started
+      rates-service:
+        condition: service_started
     environment:
       AUTH_SERVICE_URL: http://auth-service:8000
       ACCOUNTS_SERVICE_URL: http://accounts-service:8002
       CATEGORIES_SERVICE_URL: http://categories-service:8003
       TRANSACTIONS_SERVICE_URL: http://transactions-service:8004
+      BUDGETS_SERVICE_URL: http://budgets-service:8005
+      RATES_SERVICE_URL: http://rates-service:8006
       SENTRY_DSN: ""
 
   frontend:
@@ -177,4 +236,5 @@ volumes:
   accounts-db-data:
   categories-db-data:
   transactions-db-data:
+  budgets-db-data:
   redis-data:

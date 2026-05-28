@@ -38,24 +38,24 @@ class ExpenseCategoryService:
         return categories
 
     @staticmethod
-    async def create(user_id: str, name: str, icon: str, session: AsyncSession) -> ExpenseCategory:
+    async def create(user_id: str, name: str, icon: str, session: AsyncSession, currency: str = "USD") -> ExpenseCategory:
         from fastapi import HTTPException
         from sqlalchemy.exc import IntegrityError
         try:
-            return await ExpenseCategoryRepository.create(user_id, name, icon, session)
+            return await ExpenseCategoryRepository.create(user_id, name, icon, session, currency=currency)
         except IntegrityError:
             await session.rollback()
             raise HTTPException(status_code=409, detail="A category with this name already exists")
 
     @staticmethod
-    async def update(user_id: str, id: str, name: str, icon: str, session: AsyncSession) -> ExpenseCategory:
+    async def update(user_id: str, id: str, name: str, icon: str, session: AsyncSession, currency: str | None = None) -> ExpenseCategory:
         from fastapi import HTTPException
         from sqlalchemy.exc import IntegrityError
         row = await ExpenseCategoryRepository.get_by_id(id, user_id, session)
         if not row:
             raise HTTPException(status_code=404, detail="Expense category not found")
         try:
-            return await ExpenseCategoryRepository.update(row, name, icon, session)
+            return await ExpenseCategoryRepository.update(row, name, icon, session, currency=currency)
         except IntegrityError:
             await session.rollback()
             raise HTTPException(status_code=409, detail="A category with this name already exists")

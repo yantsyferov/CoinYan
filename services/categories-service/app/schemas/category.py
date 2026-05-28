@@ -10,6 +10,7 @@ class CategoryResponse(BaseModel):
     id: uuid.UUID
     name: str
     icon: str
+    currency: str
     created_at: datetime
     updated_at: datetime
 
@@ -17,6 +18,7 @@ class CategoryResponse(BaseModel):
 class CreateCategoryRequest(BaseModel):
     name: str
     icon: str
+    currency: str = "USD"
 
     @field_validator("name")
     @classmethod
@@ -38,6 +40,7 @@ class CreateCategoryRequest(BaseModel):
 class UpdateCategoryRequest(BaseModel):
     name: str
     icon: str
+    currency: str | None = None
 
     @field_validator("name")
     @classmethod

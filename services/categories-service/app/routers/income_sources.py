@@ -39,7 +39,7 @@ async def create_income_source(
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
-    return await IncomeSourceService.create(session=session, user_id=user_id, name=body.name, icon=body.icon)
+    return await IncomeSourceService.create(session=session, user_id=user_id, name=body.name, icon=body.icon, currency=body.currency)
 
 
 @router.get(
@@ -73,7 +73,7 @@ async def update_income_source(
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
-    return await IncomeSourceService.update(user_id=user_id, id=id, name=body.name, icon=body.icon, session=session)
+    return await IncomeSourceService.update(user_id=user_id, id=id, name=body.name, icon=body.icon, session=session, currency=body.currency)
 
 
 @router.delete(

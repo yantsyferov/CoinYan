@@ -37,6 +37,7 @@ test('cancel a transfer from the account detail page restores both account balan
   const transferRow = page.locator('[role="button"]').filter({ hasText: uniqueNote }).first();
   await expect(transferRow).toBeVisible({ timeout: 10_000 });
   await transferRow.click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
   // Dialog shows "Transfer · $200.00"
   const dialogTitle = page.locator('h3', { hasText: 'Cancel transaction?' });

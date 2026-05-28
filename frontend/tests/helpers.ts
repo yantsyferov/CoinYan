@@ -1,4 +1,4 @@
-import { type APIRequestContext } from '@playwright/test';
+import { type APIRequestContext, type Page, type Locator } from '@playwright/test';
 
 export const GQL = 'http://localhost:8001/graphql';
 export const TEST_EMAIL = 'playwright@test.com';
@@ -171,6 +171,23 @@ export async function createIncomeTransaction(
   return data.createIncomeTransaction.id;
 }
 
+export async function updateTransaction(
+  request: APIRequestContext,
+  token: string,
+  id: string,
+  amount: number,
+  note: string | null,
+): Promise<void> {
+  await gql(
+    request,
+    `mutation UpdateTransaction($input: UpdateTransactionInput!) {
+       updateTransaction(input: $input) { id amount note }
+     }`,
+    { input: { id, amount, note } },
+    token,
+  );
+}
+
 export async function createTransferTransaction(
   request: APIRequestContext,
   token: string,
@@ -199,4 +216,33 @@ export async function createTransferTransaction(
     token,
   );
   return data.createTransferTransaction.id;
+}
+
+/**
+ * Simulates a dnd-kit pointer-sensor drag from `source` to `target`.
+ * Moves 10 px initially to exceed the 8 px activation constraint.
+ */
+export async function performDrag(page: Page, source: Locator, target: Locator): Promise<void> {
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!sourceBox || !targetBox) throw new Error('Could not get bounding box for drag');
+
+  const sx = sourceBox.x + sourceBox.width / 2;
+  const sy = sourceBox.y + sourceBox.height / 2;
+  const tx = targetBox.x + targetBox.width / 2;
+  const ty = targetBox.y + targetBox.height / 2;
+
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 10, sy + 10); // exceed 8 px activation constraint
+  await page.mouse.move(tx, ty, { steps: 10 });
+  await page.mouse.up();
+}
+
+/**
+ * Returns a locator for the 72×72 draggable/droppable circle of a CircleItem
+ * identified by its display name.  Navigates: name-span → outer-div → position:relative wrapper.
+ */
+export function getCircleByName(page: Page, name: string): Locator {
+  return page.getByText(name, { exact: true }).first().locator('..').locator('div').first();
 }

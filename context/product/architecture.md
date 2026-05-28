@@ -37,6 +37,7 @@ Frontend Clients (React Web / future: iOS, Android)
   - `categories-service` — custom user-defined expense categories
   - `budgets-service` — per-category monthly budget limits and alert logic
   - `reports-service` — aggregated chart data, monthly/weekly spending reports
+  - `rates-service` — fiat exchange rate lookups; routes today's date to Open Exchange Rates API and historical dates to Frankfurter API; caches results in its own Redis instance (`rates-redis`)
 - **FE ↔ BFF Protocol:** GraphQL over HTTP
 - **BFF ↔ Microservices Protocol:** REST (HTTP + JSON)
 - **Python ORM:** SQLAlchemy (async) with Pydantic v2 for data validation
@@ -47,6 +48,7 @@ Frontend Clients (React Web / future: iOS, Android)
 
 - **Primary Database:** PostgreSQL — each microservice has its own isolated database instance (Database-per-Service pattern). Financial data is inherently relational; PostgreSQL provides strong ACID guarantees for accurate balance calculations.
 - **Database Strategy:** Database-per-Service — `auth-db`, `accounts-db`, `transactions-db`, `categories-db`, `budgets-db`, `reports-db`
+- **Rate Cache:** `rates-redis` — a dedicated Redis instance owned by `rates-service`; used exclusively for exchange rate caching (key pattern `rate:{from}:{to}:{date}`, TTL 1 hour for today's rate, 30 days for historical rates)
 - **ORM & Migrations:** SQLAlchemy (async) + Alembic — version-controlled schema migrations per service
 - **Caching Layer:** Redis — used by the BFF and services to cache dashboard aggregations, JWT token blocklist (for logout), and rate-limiting state
 
@@ -66,7 +68,7 @@ Frontend Clients (React Web / future: iOS, Android)
 ## 4. External Services & APIs
 
 - **Authentication:** Custom JWT implementation — FastAPI + `bcrypt` (password hashing) + `python-jose` (JWT signing). Access tokens (short-lived) + refresh tokens (stored in Redis). No external auth dependency.
-- **Fiat Exchange Rates (Phase 5):** Open Exchange Rates API — 170+ fiat currencies, daily rate updates. Used for multi-currency workspace and fiat base value anchor (USD, EUR, etc.).
+- **Fiat Exchange Rates (Live):** Hybrid strategy — **Open Exchange Rates API** (today's rates, requires `OPEN_EXCHANGE_RATES_APP_ID` env var) + **Frankfurter API** (free, no key, historical rates back to 1999). Proxied via `rates-service`; results cached in `rates-redis`. Stale cached rates served with a `stale: true` flag when both APIs are unreachable.
 - **Crypto & Commodity Rates (Phase 5):** CoinGecko API — crypto (BTC, ETH, etc.) and commodity (Gold) price feeds. Used for the Base Value Anchor feature when users select crypto or gold as their reference currency.
 - **Transactional Email:** Resend — password reset emails, budget alert notifications, welcome emails. Simple REST API, 100 emails/day on free tier.
 

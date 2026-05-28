@@ -12,7 +12,7 @@ import { DeleteCategoryConfirm } from '../../features/category/delete-category';
 const CREATE_EXPENSE_CATEGORY = gql`
   mutation CreateExpenseCategory($input: CreateCategoryInput!) {
     createExpenseCategory(input: $input) {
-      id name icon createdAt
+      id name icon currency createdAt
     }
   }
 `;
@@ -20,7 +20,7 @@ const CREATE_EXPENSE_CATEGORY = gql`
 const CREATE_INCOME_SOURCE = gql`
   mutation CreateIncomeSource($input: CreateCategoryInput!) {
     createIncomeSource(input: $input) {
-      id name icon createdAt
+      id name icon currency createdAt
     }
   }
 `;

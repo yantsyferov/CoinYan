@@ -122,6 +122,7 @@ test('cancel an expense transaction from the account detail page', async ({ page
 
   await expect(expenseRow).toBeVisible({ timeout: 10_000 });
   await expenseRow.click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
   // ── Step 6: Assert dialog is visible ────────────────────────────────────
   const dialogTitle = page.locator('h3', { hasText: 'Cancel transaction?' });

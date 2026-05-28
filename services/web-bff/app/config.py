@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ACCOUNTS_SERVICE_URL: str = "http://accounts-service:8002"
     CATEGORIES_SERVICE_URL: str = "http://categories-service:8003"
     TRANSACTIONS_SERVICE_URL: str = "http://transactions-service:8004"
+    BUDGETS_SERVICE_URL: str = "http://budgets-service:8005"
+    RATES_SERVICE_URL: str = "http://rates-service:8006"
     SENTRY_DSN: str = ""
 
 

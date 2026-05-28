@@ -39,7 +39,7 @@ async def create_expense_category(
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
-    return await ExpenseCategoryService.create(session=session, user_id=user_id, name=body.name, icon=body.icon)
+    return await ExpenseCategoryService.create(session=session, user_id=user_id, name=body.name, icon=body.icon, currency=body.currency)
 
 
 @router.get(
@@ -73,7 +73,7 @@ async def update_expense_category(
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
-    return await ExpenseCategoryService.update(user_id=user_id, id=id, name=body.name, icon=body.icon, session=session)
+    return await ExpenseCategoryService.update(user_id=user_id, id=id, name=body.name, icon=body.icon, session=session, currency=body.currency)
 
 
 @router.delete(

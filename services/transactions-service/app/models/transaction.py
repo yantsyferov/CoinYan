@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, Index, Numeric, String, Text, func
+from sqlalchemy import CheckConstraint, Date, DateTime, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,12 +21,18 @@ class Transaction(Base):
     account_amount: Mapped[Decimal] = mapped_column(Numeric(19, 4), nullable=False)
     account_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
     exchange_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False, default=Decimal("1.0"))
+    source_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    target_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    rate_is_custom: Mapped[bool] = mapped_column(nullable=False, default=False)
     account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     expense_category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     income_source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    transaction_date: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date()
     )
     transfer_to_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     transfer_peer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -35,7 +41,7 @@ class Transaction(Base):
     __table_args__ = (
         CheckConstraint(
             "(type = 'expense'  AND expense_category_id IS NOT NULL AND income_source_id IS NULL)"
-            " OR (type = 'income'   AND income_source_id IS NOT NULL AND expense_category_id IS NULL)"
+            " OR (type = 'income'   AND expense_category_id IS NULL)"
             " OR (type = 'transfer' AND expense_category_id IS NULL  AND income_source_id IS NULL)",
             name="chk_transaction_type",
         ),
