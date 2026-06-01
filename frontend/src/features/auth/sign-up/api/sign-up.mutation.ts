@@ -8,6 +8,7 @@ export const SIGN_UP_MUTATION = gql`
         id
         displayName
         email
+        baseCurrency
         createdAt
       }
     }
@@ -18,6 +19,7 @@ export interface SignUpUser {
   id: string;
   displayName: string;
   email: string;
+  baseCurrency: string;
   createdAt: string;
 }
 
@@ -33,5 +35,6 @@ export interface SignUpVariables {
     displayName: string;
     email: string;
     password: string;
+    baseCurrency?: string;
   };
 }

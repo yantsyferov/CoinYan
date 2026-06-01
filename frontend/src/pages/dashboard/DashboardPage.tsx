@@ -81,6 +81,7 @@ export function DashboardPage() {
   });
 
   const summary = data?.dashboard;
+  const baseCurrency = summary?.baseCurrency;
 
   const navButtonStyle: React.CSSProperties = {
     width: 36,
@@ -260,25 +261,37 @@ export function DashboardPage() {
               >
                 <SummaryCard
                   label="Total Income"
-                  value={formatCurrency(summary?.totalIncome ?? 0)}
+                  value={formatCurrency(summary?.totalIncome ?? 0, baseCurrency)}
                   valueColor="#22C55E"
                 />
                 <SummaryCard
                   label="Total Expenses"
-                  value={formatCurrency(summary?.totalExpenses ?? 0)}
+                  value={formatCurrency(summary?.totalExpenses ?? 0, baseCurrency)}
                   valueColor="#EF4444"
                 />
                 <SummaryCard
                   label="Net Balance"
-                  value={formatCurrency(summary?.netBalance ?? 0)}
+                  value={formatCurrency(summary?.netBalance ?? 0, baseCurrency)}
                   valueColor={(summary?.netBalance ?? 0) >= 0 ? '#22C55E' : '#EF4444'}
                 />
                 <SummaryCard
-                  label="Account Balance"
-                  value={summary?.totalAccountBalance == null ? '—' : formatCurrency(summary.totalAccountBalance)}
+                  label="Total Balance"
+                  value={summary?.totalAccountBalance == null ? '—' : formatCurrency(summary.totalAccountBalance, baseCurrency)}
                   valueColor="#4F46E5"
                 />
               </div>
+              {summary?.ratesStale === true ? (
+                <p
+                  style={{
+                    margin: '12px 0 0 0',
+                    fontSize: 11,
+                    color: '#94A3B8',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  * rates may be approximate
+                </p>
+              ) : null}
             </div>
 
             {/* Spending by Category */}
@@ -407,7 +420,7 @@ export function DashboardPage() {
                             flexShrink: 0,
                           }}
                         >
-                          {formatCurrency(category.amount)}
+                          {formatCurrency(category.amount, baseCurrency)}
                         </div>
                       </div>
                     );

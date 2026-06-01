@@ -13,11 +13,13 @@ class UserRepository:
         display_name: str,
         email: str,
         password_hash: str,
+        base_currency: str = 'USD',
     ) -> User:
         user = User(
             display_name=display_name,
             email=email.lower(),
             password_hash=password_hash,
+            base_currency=base_currency,
         )
         session.add(user)
         await session.flush()
@@ -46,6 +48,12 @@ class UserRepository:
     @staticmethod
     async def update_display_name(session: AsyncSession, user: User, display_name: str) -> User:
         user.display_name = display_name
+        await session.flush()
+        return user
+
+    @staticmethod
+    async def update_base_currency(session: AsyncSession, user: User, base_currency: str) -> User:
+        user.base_currency = base_currency
         await session.flush()
         return user
 

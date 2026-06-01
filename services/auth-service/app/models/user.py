@@ -43,3 +43,8 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
     )
+    base_currency: Mapped[str] = mapped_column(
+        String(3),
+        nullable=False,
+        server_default='USD',
+    )

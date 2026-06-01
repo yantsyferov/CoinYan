@@ -4,6 +4,7 @@ import { useMutation, gql } from '@apollo/client';
 import { useCurrentUser } from '../../entities/user';
 import { SIGN_OUT_MUTATION } from '../../features/auth/sign-out/api/sign-out.mutation';
 import { tokenStore } from '../../shared/lib/token-store';
+import { CurrencyPicker } from '../../shared/ui/CurrencyPicker';
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ const UPDATE_PROFILE_MUTATION = gql`
       email
       pendingEmail
       createdAt
+      baseCurrency
     }
   }
 `;
@@ -329,6 +331,45 @@ export function ProfilePage() {
     editNameValue.trim() === displayName ||
     updatingProfile;
 
+  // ── base currency editing ──
+  const [baseCurrency, setBaseCurrency] = useState<string>('');
+  const [isEditingBaseCurrency, setIsEditingBaseCurrency] = useState(false);
+  const [editBaseCurrencyValue, setEditBaseCurrencyValue] = useState('');
+  const [baseCurrencyEditError, setBaseCurrencyEditError] = useState('');
+
+  const handleEditBaseCurrencyClick = useCallback(
+    (currentValue: string) => {
+      setEditBaseCurrencyValue(currentValue);
+      setBaseCurrencyEditError('');
+      setIsEditingBaseCurrency(true);
+    },
+    [],
+  );
+
+  const handleCancelBaseCurrencyEdit = useCallback(() => {
+    setIsEditingBaseCurrency(false);
+    setBaseCurrencyEditError('');
+  }, []);
+
+  const handleSaveBaseCurrency = useCallback(async (currentValue: string) => {
+    if (!editBaseCurrencyValue || editBaseCurrencyValue === currentValue) return;
+
+    setBaseCurrencyEditError('');
+    try {
+      const { data } = await updateProfile({
+        variables: { input: { baseCurrency: editBaseCurrencyValue } },
+      });
+      if (data?.updateProfile?.baseCurrency) {
+        setBaseCurrency(data.updateProfile.baseCurrency);
+      }
+      setIsEditingBaseCurrency(false);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to update base currency';
+      setBaseCurrencyEditError(message);
+    }
+  }, [updateProfile, editBaseCurrencyValue]);
+
   // ── change-password ──
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -444,8 +485,9 @@ export function ProfilePage() {
     return <Navigate to="/sign-in" replace />;
   }
 
-  // Initialise local displayName from user on first render
+  // Initialise local state from user on first render
   const resolvedDisplayName = displayName || user.displayName;
+  const resolvedBaseCurrency = baseCurrency || user.baseCurrency || 'USD';
   const initial = resolvedDisplayName.charAt(0).toUpperCase();
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -524,6 +566,68 @@ export function ProfilePage() {
                 onClick={handleEditNameClick}
                 style={styles.editButton}
                 aria-label="Edit display name"
+              >
+                Edit
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Base currency card */}
+        <div style={cardStyle}>
+          <h2 style={sectionHeadingStyle}>Base Currency</h2>
+          {isEditingBaseCurrency ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <CurrencyPicker
+                value={editBaseCurrencyValue}
+                onChange={setEditBaseCurrencyValue}
+                disabled={updatingProfile}
+                label="Select currency"
+              />
+              {baseCurrencyEditError && (
+                <span style={styles.inlineError} role="alert">
+                  {baseCurrencyEditError}
+                </span>
+              )}
+              <div style={styles.nameEditActions}>
+                <button
+                  type="button"
+                  onClick={() => handleSaveBaseCurrency(resolvedBaseCurrency)}
+                  disabled={
+                    !editBaseCurrencyValue ||
+                    editBaseCurrencyValue === resolvedBaseCurrency ||
+                    updatingProfile
+                  }
+                  style={{
+                    ...styles.saveButton,
+                    ...((!editBaseCurrencyValue ||
+                      editBaseCurrencyValue === resolvedBaseCurrency ||
+                      updatingProfile)
+                      ? styles.saveButtonDisabled
+                      : {}),
+                  }}
+                >
+                  {updatingProfile ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelBaseCurrencyEdit}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: 15, color: '#0F172A', fontWeight: 500 }}>
+                {resolvedBaseCurrency}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleEditBaseCurrencyClick(resolvedBaseCurrency)}
+                style={styles.editButton}
+                aria-label="Edit base currency"
               >
                 Edit
               </button>

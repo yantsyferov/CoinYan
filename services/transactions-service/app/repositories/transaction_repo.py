@@ -41,6 +41,9 @@ class TransactionRepository:
         note: Optional[str],
         transaction_date: date,
         session: AsyncSession,
+        base_currency_code: Optional[str] = None,
+        base_currency_rate: Optional[Decimal] = None,
+        base_currency_amount: Optional[Decimal] = None,
     ) -> Transaction:
         row = Transaction(
             user_id=uuid.UUID(user_id),
@@ -57,6 +60,9 @@ class TransactionRepository:
             income_source_id=uuid.UUID(income_source_id) if income_source_id else None,
             note=note,
             transaction_date=transaction_date,
+            base_currency_code=base_currency_code,
+            base_currency_rate=base_currency_rate,
+            base_currency_amount=base_currency_amount,
         )
         session.add(row)
         await session.flush()
@@ -84,6 +90,9 @@ class TransactionRepository:
             transfer_to_account_id=data.to_account_id,
             note=data.note,
             transaction_date=transaction_date,
+            base_currency_code=data.base_currency_code,
+            base_currency_rate=data.base_currency_rate,
+            base_currency_amount=data.base_currency_amount,
         )
         credit_leg = Transaction(
             user_id=uuid.UUID(user_id),
@@ -100,6 +109,9 @@ class TransactionRepository:
             transfer_to_account_id=data.to_account_id,
             note=data.note,
             transaction_date=transaction_date,
+            base_currency_code=data.base_currency_code,
+            base_currency_rate=data.base_currency_rate,
+            base_currency_amount=data.base_currency_amount,
         )
         session.add(debit_leg)
         session.add(credit_leg)
@@ -157,11 +169,26 @@ class TransactionRepository:
         year: Optional[int] = None,
         month: Optional[int] = None,
         after_date: Optional[datetime] = None,
+        base_currency: Optional[str] = None,
     ) -> dict:
+        def _amount_expr(base_currency: Optional[str]):
+            if base_currency is not None:
+                return func.sum(
+                    case(
+                        (
+                            (Transaction.base_currency_code == base_currency)
+                            & Transaction.base_currency_amount.isnot(None),
+                            Transaction.base_currency_amount,
+                        ),
+                        else_=Transaction.amount,
+                    )
+                ).label("total")
+            return func.sum(Transaction.amount).label("total")
+
         if after_date is not None:
             after_date_only = after_date.date() if isinstance(after_date, datetime) else after_date
             expense_stmt = (
-                select(Transaction.expense_category_id, func.sum(Transaction.amount).label("total"))
+                select(Transaction.expense_category_id, _amount_expr(base_currency))
                 .where(Transaction.user_id == uuid.UUID(user_id))
                 .where(Transaction.type == "expense")
                 .where(Transaction.expense_category_id.isnot(None))
@@ -171,7 +198,7 @@ class TransactionRepository:
             expense_rows = await session.execute(expense_stmt)
 
             income_stmt = (
-                select(Transaction.income_source_id, func.sum(Transaction.amount).label("total"))
+                select(Transaction.income_source_id, _amount_expr(base_currency))
                 .where(Transaction.user_id == uuid.UUID(user_id))
                 .where(Transaction.type == "income")
                 .where(Transaction.income_source_id.isnot(None))
@@ -184,7 +211,7 @@ class TransactionRepository:
             start, end = _month_range(year or now.year, month or now.month)
 
             expense_stmt = (
-                select(Transaction.expense_category_id, func.sum(Transaction.amount).label("total"))
+                select(Transaction.expense_category_id, _amount_expr(base_currency))
                 .where(Transaction.user_id == uuid.UUID(user_id))
                 .where(Transaction.type == "expense")
                 .where(Transaction.expense_category_id.isnot(None))
@@ -195,7 +222,7 @@ class TransactionRepository:
             expense_rows = await session.execute(expense_stmt)
 
             income_stmt = (
-                select(Transaction.income_source_id, func.sum(Transaction.amount).label("total"))
+                select(Transaction.income_source_id, _amount_expr(base_currency))
                 .where(Transaction.user_id == uuid.UUID(user_id))
                 .where(Transaction.type == "income")
                 .where(Transaction.income_source_id.isnot(None))
@@ -266,6 +293,7 @@ class TransactionRepository:
         account_amount: Optional[Decimal] = None,
         exchange_rate: Optional[Decimal] = None,
         rate_is_custom: Optional[bool] = None,
+        base_currency_rate: Optional[Decimal] = None,
     ) -> tuple["Transaction", Decimal]:
         txn = await TransactionRepository.get_by_id(transaction_id, user_id, session)
         if txn is None:
@@ -282,6 +310,9 @@ class TransactionRepository:
         txn.note = note if note else None
         if transaction_date is not None:
             txn.transaction_date = transaction_date
+        if base_currency_rate is not None:
+            txn.base_currency_rate = base_currency_rate
+            txn.base_currency_amount = round(amount * base_currency_rate, 4)
         await session.flush()
         await session.refresh(txn)
         return txn, old_account_amount
@@ -382,6 +413,49 @@ class TransactionRepository:
             "from_account_id": from_account_id,
             "to_account_id": to_account_id,
         }
+
+    @staticmethod
+    async def get_latest_rate(
+        session: AsyncSession,
+        account_id: str,
+        base_currency_code: str,
+    ) -> Optional[Decimal]:
+        """Return the most recent account_currency→base_currency rate for this account.
+
+        Two sources are considered:
+        1. Transactions where source_currency == base_currency (Case A, source is base):
+           exchange_rate is stored as "1 base = X account", so the account→base rate
+           is 1 / exchange_rate.
+        2. Transactions where base_currency_code is set and source_currency != base_currency
+           (Case B or account-is-base Case A): base_currency_rate is already
+           "1 source = X base", which for pure account-currency transactions equals
+           "1 account = X base" directly.
+        """
+        from sqlalchemy import text
+        sql = text("""
+            SELECT
+                CASE
+                    WHEN source_currency = :base AND exchange_rate > 0
+                        THEN 1.0 / exchange_rate
+                    ELSE base_currency_rate
+                END AS derived_rate
+            FROM transactions
+            WHERE account_id = :account_id
+              AND (
+                  (source_currency = :base AND exchange_rate > 0)
+                  OR (base_currency_code = :base
+                      AND base_currency_rate IS NOT NULL
+                      AND source_currency != :base)
+              )
+            ORDER BY created_at DESC
+            LIMIT 1
+        """)
+        result = await session.execute(
+            sql,
+            {"account_id": uuid.UUID(account_id), "base": base_currency_code},
+        )
+        row = result.scalar_one_or_none()
+        return Decimal(str(row)) if row is not None else None
 
     @staticmethod
     async def get_cumulative_balance(

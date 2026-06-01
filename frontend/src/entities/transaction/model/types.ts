@@ -17,4 +17,7 @@ export interface Transaction {
   note?: string | null;
   createdAt: string;
   transactionDate?: string | null;
+  baseCurrencyCode?: string | null;
+  baseCurrencyRate?: number | null;
+  baseCurrencyAmount?: number | null;
 }

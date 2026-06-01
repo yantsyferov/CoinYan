@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     TRANSACTIONS_SERVICE_URL: str = "http://transactions-service:8004"
     BUDGETS_SERVICE_URL: str = "http://budgets-service:8005"
     RATES_SERVICE_URL: str = "http://rates-service:8006"
+    REDIS_URL: str = "redis://redis:6379/0"
     SENTRY_DSN: str = ""
 
 

@@ -4,4 +4,5 @@ export interface User {
   email: string;
   pendingEmail?: string | null;
   createdAt: string;
+  baseCurrency: string;
 }

@@ -11,6 +11,8 @@ export const ACCOUNTS_QUERY = gql`
       status
       deletedAt
       createdAt
+      balanceInBaseCurrency
+      baseCurrency
     }
   }
 `;

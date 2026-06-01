@@ -7,6 +7,7 @@ import {
   SignUpVariables,
 } from '../../features/auth/sign-up/api/sign-up.mutation';
 import { tokenStore } from '../../shared/lib/token-store';
+import { CurrencyPicker } from '../../shared/ui/CurrencyPicker';
 
 interface PasswordRequirements {
   minLength: boolean;
@@ -130,6 +131,7 @@ export function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [baseCurrency, setBaseCurrency] = useState('USD');
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmTouched, setConfirmTouched] = useState(false);
 
@@ -162,6 +164,7 @@ export function SignUpPage() {
             displayName: displayName.trim(),
             email: email.trim(),
             password,
+            baseCurrency,
           },
         },
       });
@@ -171,7 +174,7 @@ export function SignUpPage() {
         navigate('/');
       }
     },
-    [signUp, isFormValid, displayName, email, password],
+    [signUp, isFormValid, displayName, email, password, baseCurrency],
   );
 
   const requirementIcon = (met: boolean) => (met ? '✓' : '✗');
@@ -255,6 +258,14 @@ export function SignUpPage() {
             {showMismatchError && (
               <span style={styles.errorText}>Passwords do not match</span>
             )}
+          </div>
+
+          <div style={styles.fieldWrapper}>
+            <CurrencyPicker
+              value={baseCurrency}
+              onChange={setBaseCurrency}
+              label="Base Currency"
+            />
           </div>
 
           <button

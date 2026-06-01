@@ -1,7 +1,8 @@
 import asyncio
 import base64
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import date as date_type
 from enum import Enum
 from typing import Annotated
 
@@ -34,6 +35,7 @@ class User:
     email: str
     pending_email: str | None
     created_at: str
+    base_currency: str
 
 
 @strawberry.type
@@ -57,6 +59,8 @@ class Account:
     status: str
     deleted_at: str | None
     created_at: str
+    balance_in_base_currency: float | None = None
+    base_currency: str | None = None
 
 
 @strawberry.type
@@ -76,6 +80,7 @@ class SignUpInput:
     display_name: str
     email: str
     password: str
+    base_currency: str = "USD"
 
 
 @strawberry.input
@@ -92,7 +97,8 @@ class ResetPasswordInput:
 
 @strawberry.input
 class UpdateProfileInput:
-    display_name: str
+    display_name: str | None = None
+    base_currency: str | None = None
 
 
 @strawberry.input
@@ -151,6 +157,9 @@ class Transaction:
     target_amount: float | None = None
     target_currency: str | None = None
     rate_is_custom: bool | None = None
+    base_currency_code: str | None = None
+    base_currency_rate: float | None = None
+    base_currency_amount: float | None = None
 
 
 @strawberry.input
@@ -205,9 +214,12 @@ class UpdateTransactionInput:
     exchange_rate: float | None = None
     account_amount: float | None = None
     rate_is_custom: bool | None = None
+    base_currency_rate: float | None = None
 
 
 def _to_transaction(t: dict) -> "Transaction":
+    raw_bcr = t.get("base_currency_rate")
+    raw_bca = t.get("base_currency_amount")
     return Transaction(
         id=t["id"],
         type=t["type"],
@@ -229,6 +241,9 @@ def _to_transaction(t: dict) -> "Transaction":
         target_amount=float(t["account_amount"]),
         target_currency=t.get("target_currency"),
         rate_is_custom=t.get("rate_is_custom", False),
+        base_currency_code=t.get("base_currency_code"),
+        base_currency_rate=float(raw_bcr) if raw_bcr is not None else None,
+        base_currency_amount=float(raw_bca) if raw_bca is not None else None,
     )
 
 
@@ -239,6 +254,170 @@ async def _adjust_balance(user_id: str, account_id: str, delta: float) -> None:
             json={"delta": delta},
             headers={"X-User-Id": user_id},
         )
+
+
+async def _get_user_base_currency(user_id: str, authorization: str, redis_client) -> str:
+    """Return the user's base_currency, using a 5-minute Redis cache keyed by user_id."""
+    cache_key = f"user_base_currency:{user_id}"
+    cached = await redis_client.get(cache_key)
+    if cached:
+        return cached.decode() if isinstance(cached, bytes) else cached
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{settings.AUTH_SERVICE_URL}/internal/auth/me",
+            headers={"authorization": authorization},
+        )
+    if resp.status_code != 200:
+        return "USD"  # safe fallback — never block transaction creation
+    base_currency: str = resp.json().get("base_currency", "USD")
+    await redis_client.setex(cache_key, 300, base_currency)
+    return base_currency
+
+
+def _compute_base_currency_fields_case_a(
+    source_currency: str,
+    account_currency: str,
+    base_currency: str,
+    amount: float,
+    account_amount: float,
+    exchange_rate: float,
+) -> dict | None:
+    """Compute base-currency fields when one side of the transaction IS the base currency.
+
+    Returns a dict with base_currency_code/rate/amount for Case A, or None for Case B
+    (neither currency matches base — handled by a separate task).
+    """
+    if source_currency == base_currency:
+        # Source IS base: 1 source = 1 base, so rate = 1.0 and base amount = source amount.
+        return {
+            "base_currency_code": base_currency,
+            "base_currency_rate": 1.0,
+            "base_currency_amount": amount,
+        }
+    if account_currency == base_currency:
+        # Account IS base: exchange_rate is source→account, so 1 source = exchange_rate base.
+        return {
+            "base_currency_code": base_currency,
+            "base_currency_rate": exchange_rate,
+            "base_currency_amount": account_amount,
+        }
+    # Case B — neither side is base currency; handled later.
+    return None
+
+
+async def _compute_base_currency_fields_case_b(
+    source_currency: str,
+    base_currency: str,
+    amount: float,
+    transaction_date: str,
+    authorization: str,
+) -> dict | None:
+    """Fetch rate from rates-service for cross-currency (Case B) transactions.
+
+    Returns a dict with base_currency_code/rate/amount, or None if the rate
+    cannot be retrieved (so the transaction still saves without base currency data).
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.RATES_SERVICE_URL}/internal/rates/rate",
+                params={"from": source_currency, "to": base_currency, "date": transaction_date},
+                headers={"Authorization": authorization},
+            )
+        resp.raise_for_status()
+        rate_data = resp.json()
+        raw_rate = rate_data.get("rate")
+        if raw_rate is None:
+            logging.warning(
+                "rates-service returned null rate for %s->%s on %s; skipping base_currency fields",
+                source_currency,
+                base_currency,
+                transaction_date,
+            )
+            return None
+        rate = float(raw_rate)
+        return {
+            "base_currency_code": base_currency,
+            "base_currency_rate": rate,
+            "base_currency_amount": round(amount * rate, 4),
+        }
+    except Exception as exc:
+        logging.warning(
+            "Failed to fetch rate from rates-service for Case B (%s->%s on %s): %s; "
+            "skipping base_currency fields",
+            source_currency,
+            base_currency,
+            transaction_date,
+            exc,
+        )
+        return None
+
+
+async def _fetch_account_rate(from_currency: str, to_currency: str) -> tuple[float | None, bool]:
+    """Fetch today's exchange rate from rates-service for account balance conversion.
+
+    Returns (rate, stale). If the request fails or returns no rate, returns (None, False)
+    so the caller can degrade gracefully.
+    """
+    today = date_type.today().isoformat()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.RATES_SERVICE_URL}/internal/rates/rate",
+                params={"from": from_currency, "to": to_currency, "date": today},
+            )
+        resp.raise_for_status()
+        data = resp.json()
+        raw_rate = data.get("rate")
+        if raw_rate is None:
+            logging.warning(
+                "rates-service returned null rate for account conversion %s->%s on %s",
+                from_currency,
+                to_currency,
+                today,
+            )
+            return None, False
+        return float(raw_rate), bool(data.get("stale", False))
+    except Exception as exc:
+        logging.warning(
+            "Failed to fetch account conversion rate %s->%s: %s",
+            from_currency,
+            to_currency,
+            exc,
+        )
+        return None, False
+
+
+async def _get_account_rate_from_transactions(
+    account_id: str,
+    base_currency: str,
+    user_id: str,
+) -> float | None:
+    """Return the most recent base_currency_rate stored on transactions for this account/currency pair.
+
+    Returns None if no matching transaction exists or if the call fails.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/latest-rate",
+                params={"account_id": account_id, "base_currency_code": base_currency},
+                headers={"X-User-Id": user_id},
+            )
+        resp.raise_for_status()
+        data = resp.json()
+        raw_rate = data.get("rate")
+        if raw_rate is None:
+            return None
+        return float(raw_rate)
+    except Exception as exc:
+        logging.warning(
+            "Failed to fetch transaction-based rate for account %s (%s): %s",
+            account_id,
+            base_currency,
+            exc,
+        )
+        return None
 
 
 @strawberry.type
@@ -259,6 +438,8 @@ class DashboardSummary:
     net_balance: float
     total_account_balance: float | None
     categories: list[DashboardCategoryItem]
+    base_currency: str = "USD"
+    rates_stale: bool = False
 
 
 @strawberry.enum
@@ -279,6 +460,7 @@ class Mutation:
                         "display_name": input.display_name,
                         "email": input.email,
                         "password": input.password,
+                        "base_currency": input.base_currency,
                     },
                 )
                 resp.raise_for_status()
@@ -302,6 +484,7 @@ class Mutation:
                 email=user_data["email"],
                 pending_email=user_data.get("pending_email"),
                 created_at=user_data["created_at"],
+                base_currency=user_data.get("base_currency", "USD"),
             ),
         )
 
@@ -340,6 +523,7 @@ class Mutation:
                 email=user_data["email"],
                 pending_email=user_data.get("pending_email"),
                 created_at=user_data["created_at"],
+                base_currency=user_data.get("base_currency", "USD"),
             ),
         )
 
@@ -422,6 +606,7 @@ class Mutation:
                 email=user_data["email"],
                 pending_email=user_data.get("pending_email"),
                 created_at=user_data["created_at"],
+                base_currency=user_data.get("base_currency", "USD"),
             ),
         )
 
@@ -429,10 +614,16 @@ class Mutation:
     async def update_profile(self, input: UpdateProfileInput, info: Info) -> User:
         request = info.context["request"]
         auth_header = request.headers.get("authorization", "")
+        user_id = _extract_user_id(auth_header)
+        patch_body: dict = {}
+        if input.display_name is not None:
+            patch_body["display_name"] = input.display_name
+        if input.base_currency is not None:
+            patch_body["base_currency"] = input.base_currency
         async with httpx.AsyncClient() as client:
             resp = await client.patch(
                 f"{settings.AUTH_SERVICE_URL}/internal/auth/me/profile",
-                json={"display_name": input.display_name},
+                json=patch_body,
                 headers={"authorization": auth_header},
             )
         if resp.status_code == 422:
@@ -440,12 +631,19 @@ class Mutation:
         if resp.status_code >= 400:
             raise Exception(f"Update failed: {resp.status_code}")
         data = resp.json()
+        # Invalidate the base_currency Redis cache so subsequent queries use the new value.
+        if input.base_currency is not None and user_id:
+            redis_client = info.context.get("redis")
+            if redis_client is not None:
+                cache_key = f"user_base_currency:{user_id}"
+                await redis_client.delete(cache_key)
         return User(
             id=data["id"],
             display_name=data["display_name"],
             email=data["email"],
             pending_email=data.get("pending_email"),
             created_at=data["created_at"],
+            base_currency=data.get("base_currency", "USD"),
         )
 
     @strawberry.mutation
@@ -500,6 +698,7 @@ class Mutation:
             email=data["email"],
             pending_email=data.get("pending_email"),
             created_at=data["created_at"],
+            base_currency=data.get("base_currency", "USD"),
         )
 
     @strawberry.mutation
@@ -865,26 +1064,55 @@ class Mutation:
         self, input: CreateExpenseTransactionInput, info: Info
     ) -> Transaction:
         request = info.context["request"]
-        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        auth_header = request.headers.get("authorization", "")
+        user_id = _extract_user_id(auth_header)
         if not user_id:
             raise Exception("Unauthorized")
+
+        redis_client = info.context.get("redis")
+        source_currency = input.source_currency or input.account_currency
+        txn_payload: dict = {
+            "type": "expense",
+            "amount": input.amount,
+            "account_amount": input.account_amount,
+            "account_currency": input.account_currency,
+            "exchange_rate": input.exchange_rate,
+            "account_id": str(input.account_id),
+            "expense_category_id": str(input.expense_category_id),
+            "note": input.note,
+            "source_currency": input.source_currency or "USD",
+            "target_currency": input.target_currency or "USD",
+            "rate_is_custom": input.rate_is_custom or False,
+        }
+        if input.transaction_date is not None:
+            txn_payload["transaction_date"] = input.transaction_date
+        if redis_client is not None:
+            base_currency = await _get_user_base_currency(user_id, auth_header, redis_client)
+            base_fields = _compute_base_currency_fields_case_a(
+                source_currency=source_currency,
+                account_currency=input.account_currency,
+                base_currency=base_currency,
+                amount=input.amount,
+                account_amount=input.account_amount,
+                exchange_rate=input.exchange_rate,
+            )
+            if base_fields is None:
+                # Case B: neither source_currency nor account_currency equals base_currency.
+                txn_date = input.transaction_date or date_type.today().isoformat()
+                base_fields = await _compute_base_currency_fields_case_b(
+                    source_currency=source_currency,
+                    base_currency=base_currency,
+                    amount=input.amount,
+                    transaction_date=txn_date,
+                    authorization=auth_header,
+                )
+            if base_fields is not None:
+                txn_payload.update(base_fields)
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
-                json={
-                    "type": "expense",
-                    "amount": input.amount,
-                    "account_amount": input.account_amount,
-                    "account_currency": input.account_currency,
-                    "exchange_rate": input.exchange_rate,
-                    "account_id": str(input.account_id),
-                    "expense_category_id": str(input.expense_category_id),
-                    "note": input.note,
-                    "transaction_date": input.transaction_date,
-                    "source_currency": input.source_currency or "USD",
-                    "target_currency": input.target_currency or "USD",
-                    "rate_is_custom": input.rate_is_custom or False,
-                },
+                json=txn_payload,
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
@@ -898,26 +1126,55 @@ class Mutation:
         self, input: CreateIncomeTransactionInput, info: Info
     ) -> Transaction:
         request = info.context["request"]
-        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        auth_header = request.headers.get("authorization", "")
+        user_id = _extract_user_id(auth_header)
         if not user_id:
             raise Exception("Unauthorized")
+
+        redis_client = info.context.get("redis")
+        source_currency = input.source_currency or input.account_currency
+        txn_payload: dict = {
+            "type": "income",
+            "amount": input.amount,
+            "account_amount": input.account_amount,
+            "account_currency": input.account_currency,
+            "exchange_rate": input.exchange_rate,
+            "account_id": str(input.account_id),
+            "income_source_id": str(input.income_source_id),
+            "note": input.note,
+            "source_currency": input.source_currency or "USD",
+            "target_currency": input.target_currency or "USD",
+            "rate_is_custom": input.rate_is_custom or False,
+        }
+        if input.transaction_date is not None:
+            txn_payload["transaction_date"] = input.transaction_date
+        if redis_client is not None:
+            base_currency = await _get_user_base_currency(user_id, auth_header, redis_client)
+            base_fields = _compute_base_currency_fields_case_a(
+                source_currency=source_currency,
+                account_currency=input.account_currency,
+                base_currency=base_currency,
+                amount=input.amount,
+                account_amount=input.account_amount,
+                exchange_rate=input.exchange_rate,
+            )
+            if base_fields is None:
+                # Case B: neither source_currency nor account_currency equals base_currency.
+                txn_date = input.transaction_date or date_type.today().isoformat()
+                base_fields = await _compute_base_currency_fields_case_b(
+                    source_currency=source_currency,
+                    base_currency=base_currency,
+                    amount=input.amount,
+                    transaction_date=txn_date,
+                    authorization=auth_header,
+                )
+            if base_fields is not None:
+                txn_payload.update(base_fields)
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions",
-                json={
-                    "type": "income",
-                    "amount": input.amount,
-                    "account_amount": input.account_amount,
-                    "account_currency": input.account_currency,
-                    "exchange_rate": input.exchange_rate,
-                    "account_id": str(input.account_id),
-                    "income_source_id": str(input.income_source_id),
-                    "note": input.note,
-                    "transaction_date": input.transaction_date,
-                    "source_currency": input.source_currency or "USD",
-                    "target_currency": input.target_currency or "USD",
-                    "rate_is_custom": input.rate_is_custom or False,
-                },
+                json=txn_payload,
                 headers={"X-User-Id": user_id},
             )
         if resp.status_code >= 400:
@@ -975,6 +1232,8 @@ class Mutation:
             patch_payload["account_amount"] = input.account_amount
         if input.rate_is_custom is not None:
             patch_payload["rate_is_custom"] = input.rate_is_custom
+        if input.base_currency_rate is not None:
+            patch_payload["base_currency_rate"] = input.base_currency_rate
 
         async with httpx.AsyncClient() as client:
             resp = await client.patch(
@@ -1032,11 +1291,14 @@ class Mutation:
         self, input: CreateTransferTransactionInput, info: Info
     ) -> Transaction:
         request = info.context["request"]
-        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        auth_header = request.headers.get("authorization", "")
+        user_id = _extract_user_id(auth_header)
         if not user_id:
             raise Exception("Unauthorized")
 
-        # Step 1: create the two linked transaction rows in transactions-service
+        # Step 1: create the two linked transaction rows in transactions-service.
+        # For the debit leg: source_currency = from_currency, account_currency = from_currency.
+        # The exchange_rate converts from_currency → to_currency (from_amount * rate = to_amount).
         transfer_payload: dict = {
             "from_account_id": str(input.from_account_id),
             "to_account_id": str(input.to_account_id),
@@ -1049,6 +1311,42 @@ class Mutation:
         }
         if input.transaction_date is not None:
             transfer_payload["transaction_date"] = input.transaction_date
+
+        redis_client = info.context.get("redis")
+        if redis_client is not None:
+            base_currency = await _get_user_base_currency(user_id, auth_header, redis_client)
+            # Debit leg: source = from_currency, account = from_currency, amount = from_amount.
+            base_fields = _compute_base_currency_fields_case_a(
+                source_currency=input.from_currency,
+                account_currency=input.from_currency,
+                base_currency=base_currency,
+                amount=input.from_amount,
+                account_amount=input.from_amount,
+                exchange_rate=input.exchange_rate,
+            )
+            # If the debit leg doesn't match, check the credit leg (to_currency = base).
+            if base_fields is None:
+                base_fields = _compute_base_currency_fields_case_a(
+                    source_currency=input.from_currency,
+                    account_currency=input.to_currency,
+                    base_currency=base_currency,
+                    amount=input.from_amount,
+                    account_amount=input.to_amount,
+                    exchange_rate=input.exchange_rate,
+                )
+            if base_fields is None:
+                # Case B: neither from_currency nor to_currency equals base_currency.
+                txn_date = input.transaction_date or date_type.today().isoformat()
+                base_fields = await _compute_base_currency_fields_case_b(
+                    source_currency=input.from_currency,
+                    base_currency=base_currency,
+                    amount=input.from_amount,
+                    transaction_date=txn_date,
+                    authorization=auth_header,
+                )
+            if base_fields is not None:
+                transfer_payload.update(base_fields)
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/transfer",
@@ -1115,6 +1413,7 @@ class Query:
             email=data["email"],
             pending_email=data.get("pending_email"),
             created_at=data["created_at"],
+            base_currency=data.get("base_currency", "USD"),
         )
 
     @strawberry.field
@@ -1125,6 +1424,8 @@ class Query:
         if not user_id:
             raise Exception("Unauthorized")
 
+        redis_client = info.context.get("redis")
+
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{settings.ACCOUNTS_SERVICE_URL}/internal/accounts",
@@ -1134,19 +1435,70 @@ class Query:
         if resp.status_code >= 400:
             raise Exception(f"Failed to fetch accounts: {resp.status_code}")
 
-        return [
-            Account(
-                id=a["id"],
-                name=a["name"],
-                icon=a["icon"],
-                currency=a["currency"],
-                current_balance=float(a["current_balance"]),
-                status=a["status"],
-                deleted_at=a.get("deleted_at"),
-                created_at=a["created_at"],
+        raw_accounts = resp.json()
+
+        # Fetch base currency (with Redis cache) to enable balance conversion.
+        base_currency: str = "USD"
+        if redis_client is not None:
+            base_currency = await _get_user_base_currency(user_id, auth_header, redis_client)
+
+        # For accounts whose currency differs from the base, resolve conversion rates.
+        # Priority: stored transaction rate (per-account) → rates-service (per-currency pair).
+        foreign_accounts = [a for a in raw_accounts if a["currency"] != base_currency]
+
+        # Step 1: try transaction-based rate for every foreign-currency account concurrently.
+        txn_rate_tasks = {
+            a["id"]: _get_account_rate_from_transactions(a["id"], base_currency, user_id)
+            for a in foreign_accounts
+        }
+        txn_rates: dict[str, float | None] = {}
+        if txn_rate_tasks:
+            fetched_txn = await asyncio.gather(*txn_rate_tasks.values())
+            txn_rates = dict(zip(txn_rate_tasks.keys(), fetched_txn))
+
+        # Step 2: fall back to rates-service for accounts where the transaction rate is missing.
+        missing_currencies: set[str] = {
+            a["currency"]
+            for a in foreign_accounts
+            if txn_rates.get(a["id"]) is None
+        }
+        fallback_rate_results: dict[str, tuple[float | None, bool]] = {}
+        if missing_currencies:
+            fallback_tasks = {
+                currency: _fetch_account_rate(currency, base_currency)
+                for currency in missing_currencies
+            }
+            fetched_fallback = await asyncio.gather(*fallback_tasks.values())
+            fallback_rate_results = dict(zip(fallback_tasks.keys(), fetched_fallback))
+
+        accounts: list[Account] = []
+        for a in raw_accounts:
+            currency = a["currency"]
+            current_balance = float(a["current_balance"])
+            if currency == base_currency:
+                balance_in_base_currency: float | None = current_balance
+            else:
+                rate: float | None = txn_rates.get(a["id"])
+                if rate is None:
+                    rate, _stale = fallback_rate_results.get(currency, (None, False))
+                balance_in_base_currency = (
+                    round(current_balance * rate, 4) if rate is not None else None
+                )
+            accounts.append(
+                Account(
+                    id=a["id"],
+                    name=a["name"],
+                    icon=a["icon"],
+                    currency=currency,
+                    current_balance=current_balance,
+                    status=a["status"],
+                    deleted_at=a.get("deleted_at"),
+                    created_at=a["created_at"],
+                    balance_in_base_currency=balance_in_base_currency,
+                    base_currency=base_currency,
+                )
             )
-            for a in resp.json()
-        ]
+        return accounts
 
     @strawberry.field
     async def archived_accounts(self, info: Info) -> list[Account]:
@@ -1307,39 +1659,30 @@ class Query:
         self, info: Info, year: int | None = None, month: int | None = None
     ) -> DashboardSummary:
         request = info.context["request"]
-        user_id = _extract_user_id(request.headers.get("authorization", ""))
+        auth_header = request.headers.get("authorization", "")
+        user_id = _extract_user_id(auth_header)
         if not user_id:
             raise Exception("Unauthorized")
+
+        redis_client = info.context.get("redis")
+        base_currency = await _get_user_base_currency(user_id, auth_header, redis_client)
 
         totals_params: dict = {}
         if year is not None:
             totals_params["year"] = year
         if month is not None:
             totals_params["month"] = month
-
-        # Compute the cutoff datetime for the balance endpoint
-        now = datetime.now(timezone.utc)
-        _year = year if year is not None else now.year
-        _month = month if month is not None else now.month
-        if (_year, _month) == (now.year, now.month):
-            cutoff = now
-        else:
-            # Use midnight at the start of the next month as the exclusive upper bound
-            if _month == 12:
-                cutoff = datetime(_year + 1, 1, 1, tzinfo=timezone.utc)
-            else:
-                cutoff = datetime(_year, _month + 1, 1, tzinfo=timezone.utc)
+        totals_params["base_currency"] = base_currency
 
         async with httpx.AsyncClient() as client:
-            totals_resp, balance_resp, budgets_resp, cats_resp = await asyncio.gather(
+            totals_resp, accounts_resp, budgets_resp, cats_resp = await asyncio.gather(
                 client.get(
                     f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/totals",
                     params=totals_params,
                     headers={"X-User-Id": user_id},
                 ),
                 client.get(
-                    f"{settings.TRANSACTIONS_SERVICE_URL}/internal/transactions/balance",
-                    params={"date_to": cutoff.isoformat()},
+                    f"{settings.ACCOUNTS_SERVICE_URL}/internal/accounts",
                     headers={"X-User-Id": user_id},
                 ),
                 client.get(
@@ -1360,6 +1703,8 @@ class Query:
                 net_balance=0.0,
                 total_account_balance=None,
                 categories=[],
+                base_currency=base_currency,
+                rates_stale=False,
             )
 
         totals_data = totals_resp.json()
@@ -1374,10 +1719,57 @@ class Query:
         total_expenses = sum(expense_totals.values())
         net_balance = total_income - total_expenses
 
-        # Cumulative balance from the transactions-service balance endpoint
+        # Compute total account balance by summing all accounts converted to base currency.
+        # Priority: stored transaction rate (per-account) → rates-service (per-currency pair).
         total_account_balance: float | None = None
-        if balance_resp.status_code == 200:
-            total_account_balance = balance_resp.json().get("cumulative_balance")
+        rates_stale: bool = False
+        if accounts_resp.status_code == 200:
+            raw_accounts = accounts_resp.json()
+            foreign_accounts_dash = [a for a in raw_accounts if a["currency"] != base_currency]
+
+            # Step 1: transaction-based rates (per account), fetched concurrently.
+            txn_rate_tasks_dash = {
+                a["id"]: _get_account_rate_from_transactions(a["id"], base_currency, user_id)
+                for a in foreign_accounts_dash
+            }
+            txn_rates_dash: dict[str, float | None] = {}
+            if txn_rate_tasks_dash:
+                fetched_txn_dash = await asyncio.gather(*txn_rate_tasks_dash.values())
+                txn_rates_dash = dict(zip(txn_rate_tasks_dash.keys(), fetched_txn_dash))
+
+            # Step 2: fall back to rates-service for accounts with no stored rate.
+            missing_currencies_dash: set[str] = {
+                a["currency"]
+                for a in foreign_accounts_dash
+                if txn_rates_dash.get(a["id"]) is None
+            }
+            fallback_results_dash: dict[str, tuple[float | None, bool]] = {}
+            if missing_currencies_dash:
+                fallback_tasks_dash = {
+                    currency: _fetch_account_rate(currency, base_currency)
+                    for currency in missing_currencies_dash
+                }
+                fetched_fallback_dash = await asyncio.gather(*fallback_tasks_dash.values())
+                fallback_results_dash = dict(zip(fallback_tasks_dash.keys(), fetched_fallback_dash))
+
+            running_total: float = 0.0
+            for a in raw_accounts:
+                currency = a["currency"]
+                current_balance = float(a["current_balance"])
+                if currency == base_currency:
+                    running_total += current_balance
+                else:
+                    rate: float | None = txn_rates_dash.get(a["id"])
+                    stale: bool = False
+                    if rate is None:
+                        rate, stale = fallback_results_dash.get(currency, (None, False))
+                    if stale:
+                        rates_stale = True
+                    if rate is not None:
+                        running_total += round(current_balance * rate, 4)
+                    else:
+                        rates_stale = True
+            total_account_balance = running_total
 
         # Non-critical services — degrade gracefully on failure
         budgets: dict[str, float] = {}
@@ -1420,6 +1812,8 @@ class Query:
             net_balance=net_balance,
             total_account_balance=total_account_balance,
             categories=category_items,
+            base_currency=base_currency,
+            rates_stale=rates_stale,
         )
 
     @strawberry.field

@@ -20,6 +20,9 @@ class CreateTransactionRequest(BaseModel):
     income_source_id: Optional[uuid.UUID] = None
     note: Optional[str] = None
     transaction_date: date = Field(default_factory=date.today)
+    base_currency_code: Optional[str] = None
+    base_currency_rate: Optional[Decimal] = None
+    base_currency_amount: Optional[Decimal] = None
 
     @field_validator("amount", "exchange_rate")
     @classmethod
@@ -59,6 +62,9 @@ class CreateTransferTransactionRequest(BaseModel):
     note: Optional[str] = None
     user_id: Optional[str] = None
     transaction_date: date = Field(default_factory=date.today)
+    base_currency_code: Optional[str] = None
+    base_currency_rate: Optional[Decimal] = None
+    base_currency_amount: Optional[Decimal] = None
 
     @field_validator("from_amount", "to_amount", "exchange_rate")
     @classmethod
@@ -102,6 +108,9 @@ class TransactionResponse(BaseModel):
     transfer_to_account_id: Optional[uuid.UUID] = None
     transfer_peer_id: Optional[uuid.UUID] = None
     from_account_id: Optional[uuid.UUID] = None
+    base_currency_code: Optional[str] = None
+    base_currency_rate: Optional[Decimal] = None
+    base_currency_amount: Optional[Decimal] = None
 
 
 class UpdateTransactionRequest(BaseModel):
@@ -111,6 +120,7 @@ class UpdateTransactionRequest(BaseModel):
     exchange_rate: Optional[Decimal] = None
     account_amount: Optional[Decimal] = None
     rate_is_custom: Optional[bool] = None
+    base_currency_rate: Optional[Decimal] = None
 
     @field_validator("amount")
     @classmethod
@@ -145,3 +155,9 @@ class CurrencyTotal(BaseModel):
 
 class TotalsByCurrencyResponse(BaseModel):
     totals: list[CurrencyTotal]
+
+
+class LatestRateResponse(BaseModel):
+    account_id: str
+    base_currency_code: str
+    rate: Optional[Decimal] = None

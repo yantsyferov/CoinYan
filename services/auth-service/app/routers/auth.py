@@ -42,6 +42,7 @@ async def register(
         display_name=body.display_name,
         email=body.email,
         password_hash=password_hash,
+        base_currency=body.base_currency,
     )
 
     access_token = create_access_token({"sub": str(user.id)})
@@ -67,6 +68,7 @@ async def register(
         email=user.email,
         pending_email=user.pending_email,
         created_at=user.created_at.isoformat(),
+        base_currency=user.base_currency,
     )
 
     return AuthResponse(user=user_response, access_token=access_token)
@@ -130,6 +132,7 @@ async def login(
         email=user.email,
         pending_email=user.pending_email,
         created_at=user.created_at.isoformat(),
+        base_currency=user.base_currency,
     )
 
     return AuthResponse(user=user_response, access_token=access_token)
@@ -241,6 +244,7 @@ async def get_me(
         email=user.email,
         pending_email=user.pending_email,
         created_at=user.created_at.isoformat(),
+        base_currency=user.base_currency,
     )
 
 
@@ -336,6 +340,7 @@ async def reset_password(
             email=user.email,
             pending_email=user.pending_email,
             created_at=user.created_at.isoformat(),
+            base_currency=user.base_currency,
         ),
         access_token=access_token,
     )
@@ -356,7 +361,10 @@ async def update_profile(
     user = await UserRepository.get_by_id(session, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user = await UserRepository.update_display_name(session, user, body.display_name)
+    if body.display_name is not None:
+        user = await UserRepository.update_display_name(session, user, body.display_name)
+    if body.base_currency is not None:
+        user = await UserRepository.update_base_currency(session, user, body.base_currency)
     await session.commit()
     return UserResponse(
         id=str(user.id),
@@ -364,6 +372,7 @@ async def update_profile(
         email=user.email,
         pending_email=user.pending_email,
         created_at=user.created_at.isoformat(),
+        base_currency=user.base_currency,
     )
 
 
@@ -477,4 +486,5 @@ async def confirm_email_change(
         email=user.email,
         pending_email=user.pending_email,
         created_at=user.created_at.isoformat(),
+        base_currency=user.base_currency,
     )

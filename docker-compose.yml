@@ -210,6 +210,8 @@ services:
         condition: service_started
       rates-service:
         condition: service_started
+      redis:
+        condition: service_healthy
     environment:
       AUTH_SERVICE_URL: http://auth-service:8000
       ACCOUNTS_SERVICE_URL: http://accounts-service:8002
@@ -217,6 +219,7 @@ services:
       TRANSACTIONS_SERVICE_URL: http://transactions-service:8004
       BUDGETS_SERVICE_URL: http://budgets-service:8005
       RATES_SERVICE_URL: http://rates-service:8006
+      REDIS_URL: redis://redis:6379/0
       SENTRY_DSN: ""
 
   frontend:

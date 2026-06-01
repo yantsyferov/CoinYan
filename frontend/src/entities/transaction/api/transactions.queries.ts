@@ -20,6 +20,9 @@ export const ACCOUNT_TRANSACTIONS_QUERY = gql`
       note
       createdAt
       transactionDate
+      baseCurrencyCode
+      baseCurrencyRate
+      baseCurrencyAmount
     }
   }
 `;
@@ -41,6 +44,9 @@ export const EXPENSE_CATEGORY_TRANSACTIONS_QUERY = gql`
       note
       createdAt
       transactionDate
+      baseCurrencyCode
+      baseCurrencyRate
+      baseCurrencyAmount
     }
   }
 `;
@@ -62,6 +68,9 @@ export const INCOME_SOURCE_TRANSACTIONS_QUERY = gql`
       note
       createdAt
       transactionDate
+      baseCurrencyCode
+      baseCurrencyRate
+      baseCurrencyAmount
     }
   }
 `;

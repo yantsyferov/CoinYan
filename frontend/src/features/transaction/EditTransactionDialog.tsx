@@ -10,6 +10,7 @@ import { ACCOUNTS_QUERY } from '../../entities/account';
 import { EXPENSE_CATEGORIES_QUERY, INCOME_SOURCES_QUERY } from '../../entities/category';
 import { useExchangeRate } from '../../entities/rate';
 import type { Transaction } from '../../entities/transaction';
+import { useCurrentUser } from '../../entities/user';
 
 interface Props {
   transaction: Transaction;
@@ -37,6 +38,10 @@ const labelStyle: React.CSSProperties = {
 };
 
 export function EditTransactionDialog({ transaction, onClose }: Props) {
+  // ── User base currency ───────────────────────────────────────────────────────
+  const { user } = useCurrentUser();
+  const baseCurrency = user?.baseCurrency ?? null;
+
   // ── Cross-currency detection ────────────────────────────────────────────────
   const fromCurrency = transaction.sourceCurrency ?? transaction.accountCurrency ?? 'USD';
   const toCurrency = transaction.targetCurrency ?? transaction.accountCurrency ?? 'USD';
@@ -45,6 +50,16 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
     fromCurrency !== toCurrency &&
     !!transaction.sourceCurrency &&
     !!transaction.targetCurrency;
+
+  // ── Case B detection ─────────────────────────────────────────────────────────
+  // Case B: sourceCurrency ≠ baseCurrency AND accountCurrency ≠ baseCurrency
+  // In this case the backend cannot infer the base-currency rate automatically,
+  // so the user must supply it manually.
+  const isCaseB =
+    baseCurrency !== null &&
+    transaction.type !== 'transfer' &&
+    (transaction.sourceCurrency ?? transaction.accountCurrency) !== baseCurrency &&
+    transaction.accountCurrency !== baseCurrency;
 
   // ── Date ────────────────────────────────────────────────────────────────────
   const [date, setDate] = useState<string>(
@@ -75,6 +90,11 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
   const [targetAmount, setTargetAmount] = useState(initTargetAmount);
   const [rateIsCustom, setRateIsCustom] = useState(transaction.rateIsCustom ?? false);
   const [lastEdited, setLastEdited] = useState<'source' | 'rate' | 'target'>('source');
+
+  // ── Base-currency rate state (Case B only) ───────────────────────────────────
+  const [baseCurrencyRateInput, setBaseCurrencyRateInput] = useState<string>(
+    transaction.baseCurrencyRate != null ? String(transaction.baseCurrencyRate) : '',
+  );
 
   // ── Single-amount state (same-currency or transfer) ─────────────────────────
   const [amount, setAmount] = useState(
@@ -200,6 +220,11 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
       const mutationAmount = transaction.type === 'expense' ? tgt : src;
       const mutationAccountAmount = transaction.type === 'expense' ? src : tgt;
 
+      const parsedBaseCurrencyRate =
+        isCaseB && baseCurrencyRateInput.trim() !== ''
+          ? parseFloat(baseCurrencyRateInput.trim())
+          : undefined;
+
       try {
         await updateTransaction({
           variables: {
@@ -211,6 +236,9 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
               rateIsCustom,
               note: note.trim() || null,
               transactionDate: date,
+              ...(parsedBaseCurrencyRate !== undefined && !isNaN(parsedBaseCurrencyRate)
+                ? { baseCurrencyRate: parsedBaseCurrencyRate }
+                : {}),
             },
           },
         });
@@ -227,6 +255,12 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
       setAmountError('Amount must be greater than 0');
       return;
     }
+
+    const parsedBaseCurrencyRateSingle =
+      isCaseB && baseCurrencyRateInput.trim() !== ''
+        ? parseFloat(baseCurrencyRateInput.trim())
+        : undefined;
+
     try {
       await updateTransaction({
         variables: {
@@ -235,6 +269,10 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
             amount: val,
             note: note.trim() || null,
             transactionDate: date,
+            ...(parsedBaseCurrencyRateSingle !== undefined &&
+            !isNaN(parsedBaseCurrencyRateSingle)
+              ? { baseCurrencyRate: parsedBaseCurrencyRateSingle }
+              : {}),
           },
         },
       });
@@ -483,6 +521,31 @@ export function EditTransactionDialog({ transaction, onClose }: Props) {
             {amountError && (
               <div style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{amountError}</div>
             )}
+          </div>
+        )}
+
+        {/* Case B: base-currency conversion rate (shown only when neither source nor account currency equals base currency) */}
+        {isCaseB && baseCurrency && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>
+              Conversion rate to {baseCurrency}
+            </label>
+            <input
+              type="number"
+              min="0.000001"
+              step="0.000001"
+              value={baseCurrencyRateInput}
+              onChange={(e) => setBaseCurrencyRateInput(e.target.value)}
+              placeholder="e.g. 0.0248"
+              style={inputStyle}
+            />
+            <p style={{ fontSize: 12, color: '#94A3B8', margin: '4px 0 0' }}>
+              1{' '}
+              {transaction.sourceCurrency ?? transaction.accountCurrency}{' '}
+              ={' '}
+              {baseCurrencyRateInput || '?'}{' '}
+              {baseCurrency}
+            </p>
           </div>
         )}
 

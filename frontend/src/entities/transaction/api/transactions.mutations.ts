@@ -74,6 +74,9 @@ export const UPDATE_TRANSACTION_MUTATION = gql`
       fromAccountId
       toAccountId
       transactionDate
+      baseCurrencyCode
+      baseCurrencyRate
+      baseCurrencyAmount
     }
   }
 `;

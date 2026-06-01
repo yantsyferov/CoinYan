@@ -7,6 +7,8 @@ export const DASHBOARD_QUERY = gql`
       totalExpenses
       netBalance
       totalAccountBalance
+      ratesStale
+      baseCurrency
       categories {
         id
         name
@@ -35,6 +37,8 @@ export interface DashboardSummary {
   totalExpenses: number;
   netBalance: number;
   totalAccountBalance: number | null;
+  ratesStale?: boolean;
+  baseCurrency: string;
   categories: DashboardCategory[];
 }
 

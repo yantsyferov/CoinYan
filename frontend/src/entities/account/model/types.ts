@@ -7,4 +7,6 @@ export interface Account {
   status: string;
   deletedAt: string | null;
   createdAt: string;
+  balanceInBaseCurrency?: number | null;
+  baseCurrency?: string | null;
 }

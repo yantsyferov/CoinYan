@@ -11,6 +11,7 @@ from app.schemas.transaction import (
     CreateTransactionRequest,
     CreateTransferTransactionRequest,
     CumulativeBalanceResponse,
+    LatestRateResponse,
     TotalsByCurrencyResponse,
     TransactionResponse,
     UpdateTransactionRequest,
@@ -43,6 +44,9 @@ async def create_transaction(
         note=body.note,
         transaction_date=body.transaction_date,
         session=session,
+        base_currency_code=body.base_currency_code,
+        base_currency_rate=body.base_currency_rate,
+        base_currency_amount=body.base_currency_amount,
     )
     return row
 
@@ -77,6 +81,7 @@ async def get_totals(
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
     after_date: Optional[datetime] = Query(None),
+    base_currency: str | None = Query(default=None),
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -86,6 +91,7 @@ async def get_totals(
         year=year,
         month=month,
         after_date=after_date,
+        base_currency=base_currency,
     )
 
 
@@ -173,6 +179,7 @@ async def update_transaction(
         account_amount=body.account_amount,
         exchange_rate=body.exchange_rate,
         rate_is_custom=body.rate_is_custom,
+        base_currency_rate=body.base_currency_rate,
     )
     return UpdateTransactionResponse(
         transaction=TransactionResponse.model_validate(updated_txn),
@@ -180,6 +187,37 @@ async def update_transaction(
         peer_transaction=None,
         old_peer_account_amount=None,
     )
+
+
+@router.get("/latest-rate", response_model=LatestRateResponse, status_code=status.HTTP_200_OK)
+async def get_latest_rate(
+    account_id: str = Query(..., description="Account UUID"),
+    base_currency_code: str = Query(..., description="Base currency code, e.g. USD"),
+    user_id: str = Depends(get_user_id),
+    session: AsyncSession = Depends(get_db),
+) -> LatestRateResponse:
+    rate = await TransactionRepository.get_latest_rate(
+        session=session,
+        account_id=account_id,
+        base_currency_code=base_currency_code,
+    )
+    return LatestRateResponse(
+        account_id=account_id,
+        base_currency_code=base_currency_code,
+        rate=rate,
+    )
+
+
+@router.get("/{transaction_id}", response_model=TransactionResponse, status_code=status.HTTP_200_OK)
+async def get_transaction(
+    transaction_id: str,
+    user_id: str = Depends(get_user_id),
+    session: AsyncSession = Depends(get_db),
+) -> TransactionResponse:
+    txn = await TransactionRepository.get_by_id(transaction_id, user_id, session)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    return TransactionResponse.model_validate(txn)
 
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_200_OK)

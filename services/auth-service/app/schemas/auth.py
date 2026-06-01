@@ -5,6 +5,7 @@ class RegisterRequest(BaseModel):
     display_name: str
     email: EmailStr
     password: str
+    base_currency: str = 'USD'
 
     @field_validator("display_name")
     @classmethod
@@ -30,6 +31,14 @@ class RegisterRequest(BaseModel):
             raise ValueError("password must contain at least one digit")
         return v
 
+    @field_validator("base_currency")
+    @classmethod
+    def validate_base_currency(cls, v: str) -> str:
+        v = v.strip().upper()
+        if len(v) != 3:
+            raise ValueError("base_currency must be exactly 3 characters")
+        return v
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -44,6 +53,7 @@ class UserResponse(BaseModel):
     email: str
     pending_email: str | None
     created_at: str
+    base_currency: str = 'USD'
 
 
 class AuthResponse(BaseModel):
@@ -76,14 +86,27 @@ class ResetPasswordRequest(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    display_name: str
+    display_name: str | None = None
+    base_currency: str | None = None
 
     @field_validator("display_name")
     @classmethod
-    def validate_display_name(cls, v: str) -> str:
+    def validate_display_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
         v = v.strip()
         if not v:
             raise ValueError("Display name must not be empty")
+        return v
+
+    @field_validator("base_currency")
+    @classmethod
+    def validate_base_currency(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip().upper()
+        if len(v) != 3:
+            raise ValueError("base_currency must be exactly 3 characters")
         return v
 
 

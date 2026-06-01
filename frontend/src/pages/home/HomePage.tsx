@@ -102,8 +102,21 @@ function DraggableAccountItem({
   const icon = ACCOUNT_ICONS[account.icon] ?? '💰';
   const balanceStr = formatCurrency(account.currentBalance, account.currency);
 
+  const showBaseCurrencyLabel =
+    account.balanceInBaseCurrency != null &&
+    account.baseCurrency != null &&
+    account.currency !== account.baseCurrency;
+
+  const baseCurrencyLabel = showBaseCurrencyLabel
+    ? `≈ ${formatCurrency(account.balanceInBaseCurrency!, account.baseCurrency!)}`
+    : null;
+
   return (
-    <div onPointerDown={handlePointerDown} onClick={handleClick}>
+    <div
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+    >
       <CircleItem
         icon={icon}
         name={account.name}
@@ -114,6 +127,24 @@ function DraggableAccountItem({
         dragListeners={listeners as Record<string, unknown>}
         dragAttributes={attributes as Record<string, unknown>}
       />
+      {baseCurrencyLabel && (
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 500,
+            color: '#64748B',
+            textAlign: 'center',
+            maxWidth: 80,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+            marginTop: -4,
+          }}
+        >
+          {baseCurrencyLabel}
+        </span>
+      )}
     </div>
   );
 }

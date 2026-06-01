@@ -8,6 +8,7 @@ export const ME_QUERY = gql`
       email
       pendingEmail
       createdAt
+      baseCurrency
     }
   }
 `;

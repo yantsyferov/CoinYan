@@ -37,6 +37,9 @@ class Transaction(Base):
     transfer_to_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     transfer_peer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     from_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    base_currency_code: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    base_currency_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)
+    base_currency_amount: Mapped[Decimal | None] = mapped_column(Numeric(19, 4), nullable=True)
 
     __table_args__ = (
         CheckConstraint(

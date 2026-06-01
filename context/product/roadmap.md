@@ -67,7 +67,7 @@ _Deepens engagement and delivers on the promise of financial clarity over time._
 _Features planned for post-V1 consideration. Priority and scope will be refined based on user feedback from earlier phases._
 
 - [x] **Multi-Currency Workspace** — Track transactions in multiple currencies within a single workspace, designed for travelers and users with cross-border finances.
-- [ ] **Base Value Anchor** — Let users choose a fundamental unit of value (USD, EUR, Gold, Bitcoin, or any asset) as the lens through which all balances are displayed, recalculated daily at market rates.
+- [x] **Base Value Anchor** — Let users choose a fundamental unit of value (USD, EUR, Gold, Bitcoin, or any asset) as the lens through which all balances are displayed, recalculated daily at market rates.
 - [ ] **Crypto & Broker Integrations** — Connect crypto wallets, exchanges (e.g. Binance, Coinbase), and stock brokers to automatically import and track holdings.
 - [ ] **Automatic Bank Imports** — Securely link bank accounts to sync transactions automatically, reducing manual entry.
 - [ ] **Mobile Apps** — Native iOS and Android applications, built after the web platform is established.
